@@ -10,7 +10,7 @@
 
 ### Run the project:
 ```
-streamlit run main.py
+streamlit run cartoon_transformation.py
 ```
 
 
