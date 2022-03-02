@@ -2,8 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from upload_image import upload_image
-from median_filtering import MedianFiltering
-from gaussian_filtering import GaussianFiltering
+from filtering import GaussianFiltering, MedianFiltering
 
 
 # ============================================================================================================= #
