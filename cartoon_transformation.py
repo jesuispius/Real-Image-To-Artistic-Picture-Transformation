@@ -39,6 +39,7 @@ def generate_cartoon_image(img):
         image = median_filter(image, 5)
         edge_mask = cv2.adaptiveThreshold(
             image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 7)
+        #edge_mask = sobel_filter(image)
 
         # colour quantization
         # k value determines the number of colours in the image
