@@ -85,7 +85,7 @@ def customize_cartoon_image(img):
             st.image(image_used, caption='Gaussian Filtered Image')
     else:
         with st.spinner('Please wait...'):
-            image_used = cv2.bilateralFilter(image_used, 1, 1, 1)
+            image_used = bilateral_filter(image_used, 30, 0.1, 1)
             st.image(image_used, caption='Bilateral Filtered Image')
 
     # Using the edge
