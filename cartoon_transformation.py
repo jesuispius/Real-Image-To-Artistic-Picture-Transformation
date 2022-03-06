@@ -2,7 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from upload_image import upload_image
-from filtering import GaussianFiltering, MedianFiltering
+from filtering import GaussianFiltering, MedianFiltering, bilateral_filter
 
 
 # ============================================================================================================= #
@@ -55,7 +55,7 @@ def generate_cartoon_image(img):
         result = center[label.flatten()]
         result = result.reshape(original_img.shape)
 
-        color = cv2.bilateralFilter(result, 2, 250, 250)
+        color = bilateral_filter(result, 30, 0.1, 1)
         color = cv2.detailEnhance(color, sigma_s=10, sigma_r=0.15)
         cartoon = cv2.bitwise_and(color, color, mask=edge_mask)
         st.image(cartoon)
