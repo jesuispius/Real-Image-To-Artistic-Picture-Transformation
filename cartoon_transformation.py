@@ -2,7 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from upload_image import upload_image
-from filtering import GaussianFiltering, median_filter, bilateral_filter, gaussian_filter,sobel_filter
+from filtering import GaussianFiltering, mean_filter, bilateral_filter, gaussian_filter,sobel_filter
 
 
 # ============================================================================================================= #
@@ -36,34 +36,34 @@ def generate_cartoon_image(img):
         gray_img = cv2.cvtColor(original_img, cv2.COLOR_RGB2GRAY)
 
         image = gray_img
-        image = median_filter(image, 5)
-        edge_mask = cv2.adaptiveThreshold(
-            image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 7)
-        #edge_mask = sobel_filter(image)
+        image = sobel_filter(image)
+        # edge_mask = cv2.adaptiveThreshold(
+        #     image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 7)
+        # edge_mask = sobel_filter(image)
 
-        # colour quantization
-        # k value determines the number of colours in the image
-        total_color = 8
-        k = total_color
+        # # colour quantization
+        # # k value determines the number of colours in the image
+        # total_color = 8
+        # k = total_color
 
-        # Transform the image
-        data = np.float32(original_img).reshape((-1, 3))
+        # # Transform the image
+        # data = np.float32(original_img).reshape((-1, 3))
 
-        # Determine criteria
-        criteria = (cv2.TERM_CRITERIA_EPS +
-                    cv2.TERM_CRITERIA_MAX_ITER, 20, 0.001)
+        # # Determine criteria
+        # criteria = (cv2.TERM_CRITERIA_EPS +
+        #             cv2.TERM_CRITERIA_MAX_ITER, 20, 0.001)
 
-        # Implementing K-Means
-        ret, label, center = cv2.kmeans(
-            data, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        center = np.uint8(center)
-        result = center[label.flatten()]
-        result = result.reshape(original_img.shape)
+        # # Implementing K-Means
+        # ret, label, center = cv2.kmeans(
+        #     data, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        # center = np.uint8(center)
+        # result = center[label.flatten()]
+        # result = result.reshape(original_img.shape)
 
-        color = bilateral_filter(result, 30, 0.1, 2)
-        color = cv2.detailEnhance(color, sigma_s=10, sigma_r=0.15)
-        cartoon = cv2.bitwise_and(color, color, mask=edge_mask)
-        st.image(cartoon)
+        # color = bilateral_filter(result, 30, 0.1, 2)
+        # color = cv2.detailEnhance(color, sigma_s=10, sigma_r=0.15)
+        # cartoon = cv2.bitwise_and(color, color, mask=edge_mask)
+        st.image(image)
 
 
 def customize_cartoon_image(img):
@@ -81,7 +81,7 @@ def customize_cartoon_image(img):
     image_used = gray_img
     if algo_option == 'Median':
         with st.spinner('Please wait...'):
-            image_used = median_filter(image_used, 5)
+            image_used = mean_filter(image_used, 5)
             st.image(image_used, caption='Median Filtered Image')
 
     elif algo_option == 'Gaussian':
