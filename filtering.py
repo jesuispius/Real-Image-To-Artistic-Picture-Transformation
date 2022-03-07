@@ -1,6 +1,5 @@
 import numpy as np
 import math
-import cv2
 from multiprocessing import Pool
 import os
 import pickle
