@@ -1,16 +1,12 @@
 import numpy as np
 import math
-
-# use opencv for image loading
-import cv2
-import numpy as np
 import cv2
 from multiprocessing import Pool
-import timeit
 import os
 import pickle
 
-MAX_PROCESS_NUM = 6
+TWO_PI = 2.0 * math.pi
+MAX_PROCESS_NUM = 2
 EPSILON = 1e-8
 
 
@@ -64,6 +60,8 @@ def MedianFiltering(img, kernel_size):
 '''
 bilateral_filter
 '''
+
+
 def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_image, sigma_space, sigma_intensity):
     def gaussian_kernel(r2, sigma): return (
         np.exp(-0.5*r2/sigma**2)*3).astype(int)*1.0/3.0
@@ -83,19 +81,19 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
             sum_gs_fr += w_image*fr
             sum_fr += fr
 
-    pickle.dump(sum_fr, open('./bilateralsum_fr{0}.tmp'.format(thread_id), 'wb'),
+    pickle.dump(sum_fr, open(os.path.join(os.getcwd(), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
-    pickle.dump(sum_gs_fr, open('./bilateralsum_gs_fr{0}.tmp'.format(thread_id), 'wb'),
+    pickle.dump(sum_gs_fr, open(os.path.join(os.getcwd(), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
 
 
 def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_window_width=1):
-    
+
     responses = []
 
     pool = Pool(processes=MAX_PROCESS_NUM)
 
-    windows_width = 2*radius_window_width + 1
+    windows_width = radius_window_width
     total_window_length = 2*windows_width+1
 
     rows_every_workers = total_window_length // MAX_PROCESS_NUM
@@ -127,19 +125,22 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open('./bilateralsum_fr{0}.tmp'.format(thread_id), "rb"))
+                open(os.path.join(os.getcwd(), 'bilateralsum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open('./bilateralsum_fr{}.tmp'.format(thread_id), "rb"))
+            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+                                  'bilateralsum_fr{}.tmp'.format(thread_id)), "rb"))
 
         if thread_id == 0:
             sum_gs_fr = pickle.load(
-                open('./bilateralsum_gs_fr{0}.tmp'.format(thread_id), "rb"))
+                open(os.path.join(os.getcwd(), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
             sum_gs_fr += pickle.load(
-                open('./bilateralsum_gs_fr{}.tmp'.format(thread_id), "rb"))
+                open(os.path.join(os.getcwd(), 'bilateralsum_gs_fr{}.tmp'.format(thread_id)), "rb"))
 
-        os.remove('./bilateralsum_fr{0}.tmp'.format(thread_id))
-        os.remove('./bilateralsum_gs_fr{0}.tmp'.format(thread_id))
+        os.remove(os.path.join(
+            os.getcwd(), 'bilateralsum_fr{0}.tmp'.format(thread_id)))
+        os.remove(os.path.join(
+            os.getcwd(), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)))
 
     sum_gs_fr = sum_gs_fr/sum_fr
 
@@ -153,6 +154,8 @@ end bilateral filter
 '''
 mean filter
 '''
+
+
 def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
     sum_fr = np.zeros(input_image.shape)
 
@@ -161,7 +164,7 @@ def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
             sum_fr += w_image
 
-    pickle.dump(sum_fr, open('./median_sum_fr{0}.tmp'.format(thread_id), 'wb'),
+    pickle.dump(sum_fr, open(os.path.join(os.getcwd(), 'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
 
 
@@ -203,11 +206,13 @@ def mean_filter(input_image, radius_window_width=1):
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open('./median_sum_fr{0}.tmp'.format(thread_id), "rb"))
+                open(os.path.join(os.getcwd(), 'mean_sum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open('./median_sum_fr{}.tmp'.format(thread_id), "rb"))
+            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+                                  'mean_sum_fr{}.tmp'.format(thread_id)), "rb"))
 
-        os.remove('./median_sum_fr{0}.tmp'.format(thread_id))
+        os.remove(os.path.join(
+            os.getcwd(), 'mean_sum_fr{0}.tmp'.format(thread_id)))
 
     sum_fr = sum_fr/(total_window_length**2)
 
@@ -221,6 +226,8 @@ end mean filter
 '''
 gaussian filter
 '''
+
+
 def run_gaussian_filter(start_col, end_col, window_width, thread_id, input_image, sigma_space):
     def gaussian_kernel(data, sigma):
         return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
@@ -236,7 +243,7 @@ def run_gaussian_filter(start_col, end_col, window_width, thread_id, input_image
 
             sum_fr += gs * w_image
 
-    pickle.dump(sum_fr, open('./gaussian_sum_fr{0}.tmp'.format(thread_id), 'wb'),
+    pickle.dump(sum_fr, open(os.path.join(os.getcwd(), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
 
 
@@ -278,13 +285,16 @@ def gaussian_filter(input_image, sigma_space=10.0, radius_window_width=1):
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open('./gaussian_sum_fr{0}.tmp'.format(thread_id), "rb"))
+                open(os.path.join(os.getcwd(), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open('./gaussian_sum_fr{0}.tmp'.format(thread_id), "rb"))
+            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+                                  'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
 
-        os.remove('./gaussian_sum_fr{0}.tmp'.format(thread_id))
+        os.remove(os.path.join(
+            os.getcwd(), 'gaussian_sum_fr{0}.tmp'.format(thread_id)))
 
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
+
 
 '''
 end gaussian filter
@@ -353,11 +363,13 @@ def sobel_filter(input_image):
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open( os.path.join(os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open( os.path.join(os.getcwd(), 'sobel_sum_fr{}.tmp'.format(thread_id)), "rb"))
+            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+                                  'sobel_sum_fr{}.tmp'.format(thread_id)), "rb"))
 
-        os.remove( os.path.join(os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)))
+        os.remove(os.path.join(
+            os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)))
 
     sum_fr = np.round(sum_fr/(total_window_length**2))
 
@@ -366,67 +378,3 @@ def sobel_filter(input_image):
     '''
     end sobel_filter
     '''
-
-
-    '''
-median filter
-'''
-def run_median_filter(start_col, end_col, window_width, thread_id, input_image):
-    sum_fr = np.zeros(input_image.shape)
-    w_image 
-    for w_col in range(start_col, end_col):
-        for w_row in range(-window_width, window_width+1):
-            w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
-
-
-    pickle.dump(sum_fr, open('./median_sum_fr{0}.tmp'.format(thread_id), 'wb'),
-                pickle.HIGHEST_PROTOCOL)
-
-
-def median_filter(input_image, radius_window_width=1):
-
-    responses = []
-
-    pool = Pool(processes=MAX_PROCESS_NUM)
-
-    windows_width = radius_window_width
-    total_window_length = 2*windows_width+1
-
-    rows_every_workers = total_window_length // MAX_PROCESS_NUM
-    start_row = -windows_width
-    end_row = start_row + rows_every_workers
-
-    data = input_image
-
-    for r in range(0, MAX_PROCESS_NUM):
-        args = (start_row, end_row, windows_width, r,
-                data)
-        res = pool.apply_async(run_median_filter, args)
-
-        responses.append(res)
-
-        start_row += rows_every_workers
-
-        if r == MAX_PROCESS_NUM - 2:
-            end_row = windows_width+1
-        else:
-            end_row += rows_every_workers
-
-    for res in responses:
-        res.wait()
-
-    sum_fr = None
-
-    for thread_id in range(0, MAX_PROCESS_NUM):
-
-        if thread_id == 0:
-            sum_fr = pickle.load(
-                open('./median_sum_fr{0}.tmp'.format(thread_id), "rb"))
-        else:
-            sum_fr += pickle.load(open('./median_sum_fr{}.tmp'.format(thread_id), "rb"))
-
-        os.remove('./median_sum_fr{0}.tmp'.format(thread_id))
-
-    sum_fr = sum_fr/(total_window_length**2)
-
-    return sum_fr.clip(0.0, 255.0).astype(np.uint8)
