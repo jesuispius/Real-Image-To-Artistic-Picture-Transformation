@@ -321,7 +321,7 @@ def run_sobel_filter(start_col, end_col, window_width, thread_id, input_image):
                                    w_col + window_width] * w_image
 
     pickle.dump(sum_fr, open(
-        os.path.join(os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sobel_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
         pickle.HIGHEST_PROTOCOL)
 
 
@@ -363,17 +363,18 @@ def sobel_filter(input_image):
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open(os.path.join(os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sobel_sum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
-                                  'sobel_sum_fr{}.tmp'.format(thread_id)), "rb"))
+            sum_fr += pickle.load(open(os.path.join(os.path.dirname(
+                os.path.abspath(__file__)), 'sobel_sum_fr{0}.tmp'.format(thread_id)), "rb"))
 
-        os.remove(os.path.join(
-            os.getcwd(), 'sobel_sum_fr{0}.tmp'.format(thread_id)))
+        os.remove(os.path.join(os.path.dirname(os.path.abspath(
+            __file__)), 'sobel_sum_fr{0}.tmp'.format(thread_id)))
 
     sum_fr = np.round(sum_fr/(total_window_length**2))
 
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
+
 
     '''
     end sobel_filter
