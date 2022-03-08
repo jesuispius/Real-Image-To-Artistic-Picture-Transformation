@@ -80,9 +80,9 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
             sum_gs_fr += w_image*fr
             sum_fr += fr
 
-    pickle.dump(sum_fr, open(os.path.join(os.getcwd(), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
+    pickle.dump(sum_fr, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
-    pickle.dump(sum_gs_fr, open(os.path.join(os.getcwd(), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
+    pickle.dump(sum_gs_fr, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
 
 
@@ -124,22 +124,22 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open(os.path.join(os.getcwd(), 'bilateralsum_fr{0}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+            sum_fr += pickle.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'bilateralsum_fr{}.tmp'.format(thread_id)), "rb"))
 
         if thread_id == 0:
             sum_gs_fr = pickle.load(
-                open(os.path.join(os.getcwd(), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
             sum_gs_fr += pickle.load(
-                open(os.path.join(os.getcwd(), 'bilateralsum_gs_fr{}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{}.tmp'.format(thread_id)), "rb"))
 
         os.remove(os.path.join(
-            os.getcwd(), 'bilateralsum_fr{0}.tmp'.format(thread_id)))
+            os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)))
         os.remove(os.path.join(
-            os.getcwd(), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)))
+            os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)))
 
     sum_gs_fr = sum_gs_fr/sum_fr
 
@@ -163,7 +163,7 @@ def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
             sum_fr += w_image
 
-    pickle.dump(sum_fr, open(os.path.join(os.getcwd(), 'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
+    pickle.dump(sum_fr, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
 
 
@@ -205,13 +205,13 @@ def mean_filter(input_image, radius_window_width=1):
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open(os.path.join(os.getcwd(), 'mean_sum_fr{0}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+            sum_fr += pickle.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'mean_sum_fr{}.tmp'.format(thread_id)), "rb"))
 
         os.remove(os.path.join(
-            os.getcwd(), 'mean_sum_fr{0}.tmp'.format(thread_id)))
+            os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)))
 
     sum_fr = sum_fr/(total_window_length**2)
 
@@ -242,7 +242,7 @@ def run_gaussian_filter(start_col, end_col, window_width, thread_id, input_image
 
             sum_fr += gs * w_image
 
-    pickle.dump(sum_fr, open(os.path.join(os.getcwd(), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
+    pickle.dump(sum_fr, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
                 pickle.HIGHEST_PROTOCOL)
 
 
@@ -284,13 +284,13 @@ def gaussian_filter(input_image, sigma_space=10.0, radius_window_width=1):
 
         if thread_id == 0:
             sum_fr = pickle.load(
-                open(os.path.join(os.getcwd(), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
+                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
         else:
-            sum_fr += pickle.load(open(os.path.join(os.getcwd(),
+            sum_fr += pickle.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
 
         os.remove(os.path.join(
-            os.getcwd(), 'gaussian_sum_fr{0}.tmp'.format(thread_id)))
+            os.path.dirname(os.path.abspath(__file__)), 'gaussian_sum_fr{0}.tmp'.format(thread_id)))
 
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
 
@@ -373,7 +373,6 @@ def sobel_filter(input_image):
     sum_fr = np.round(sum_fr/(total_window_length**2))
 
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
-
 
     '''
     end sobel_filter
