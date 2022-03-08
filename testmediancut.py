@@ -53,5 +53,5 @@ def k_mean(sample_img):
 
     # the 3rd parameter represents how many colors are needed in the power of 2. If the parameter
     # passed is 4 its means 2^4 = 16 colors
-    split_into_buckets(sample_img, flattened_img_array, 3)
+    split_into_buckets(sample_img, flattened_img_array, 5)
     return sample_img
