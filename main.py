@@ -9,16 +9,25 @@ from testmediancut import k_mean
 
 
 def sobel(img):
-    kernel_horizontal = np.array([[-1, 0, 1],
-                                  [-2, 0, 2],
-                                  [-1, 0, 1]], dtype=np.float32)
+    # 3x3 sobel kernel for the horizontal direction
+    Mx = np.array([[-1, 0, 1],
+                   [-2, 0, 2],
+                   [-1, 0, 1]], dtype=np.float32)
 
-    kernel_vertical = np.array([[1, 2, 1],
-                                [0, 0, 0],
-                                [-1, -2, -1]], dtype=np.float32)
+    # 3x3 sobel kernel for the vertical direction
+    My = np.array([[1, 2, 1],
+                   [0, 0, 0],
+                   [-1, -2, -1]], dtype=np.float32)
 
-    Gx = signal.convolve2d(img, kernel_horizontal, boundary='symm', mode='same')
-    Gy = signal.convolve2d(img, kernel_vertical, boundary='symm', mode='same')
+    # Measure the gradient component in each orientation
+    # ..., after convolving the Sobel kernel to the original image
+    # Horizontal direction
+    Gx = signal.convolve2d(img, Mx, boundary='symm', mode='same')
+
+    # Vertical direction
+    Gy = signal.convolve2d(img, My, boundary='symm', mode='same')
+
+    # Find the absolute magnitude of the gradient at each pixel
     gradient_magnitude = np.sqrt(Gx * Gx + Gy * Gy)
     return gradient_magnitude
 

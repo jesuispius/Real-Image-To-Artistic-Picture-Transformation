@@ -1,3 +1,10 @@
+# ==================================================================================================================== #
+# Collaborators: Phuoc Nguyen + Tri Le
+# Description: This file includes the function to upload the image from devices to webpage
+# Filename: upload_image.py
+# ==================================================================================================================== #
+
+# Dependencies
 import streamlit as st
 from PIL import Image
 import numpy as np

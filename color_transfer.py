@@ -1,3 +1,10 @@
+# ==================================================================================================================== #
+# Collaborators: Phuoc Nguyen + Tri Le
+# Description: This file includes the functions to convert between color spaces
+# Filename: color_transfer.py
+# ==================================================================================================================== #
+
+# Dependencies
 import numpy as np
 
 
