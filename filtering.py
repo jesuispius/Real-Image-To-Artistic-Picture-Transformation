@@ -1,7 +1,7 @@
 # ==================================================================================================================== #
 # Collaborators: Phuoc Nguyen + Tri Le
-# Description: This file includes the function to upload the image from devices to webpage
-# Filename: upload_image.py
+# Description: This file includes the filters implementation for the entire of project
+# Filename: filtering.py
 # ==================================================================================================================== #
 
 # Dependencies

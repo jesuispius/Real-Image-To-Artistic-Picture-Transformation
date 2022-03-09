@@ -16,6 +16,12 @@ from testmediancut import k_mean
 
 @st.cache(suppress_st_warning=True)
 def download_image(filename):
+    """
+    Function helper to download the target image.
+
+    :param filename: filename
+    :return: None
+    """
     with open(filename, "rb") as file:
         st.download_button(
             label="Download image",
@@ -26,6 +32,16 @@ def download_image(filename):
 
 
 def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False):
+    """
+    Function to save and display the image on the webpage.
+
+    :param img: image
+    :param label: label of image
+    :param path: where to store image
+    :param is_shown: whether showing image on the webpage or not
+    :param is_downloaded: whether download the image or not
+    :return: image result
+    """
     image = np.array(img).astype(np.uint8)
 
     if is_shown:
@@ -45,6 +61,14 @@ def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False
 
 
 def generate_image(img_RGB, path, is_shown=False):
+    """
+    Function helper to generate the final image from the original image.
+
+    :param img_RGB: original image
+    :param path: where to store image
+    :param is_shown: whether showing image or not
+    :return: image result
+    """
     if len(img_RGB) != 0:
         # Gray scale
         with st.spinner('Please waiting...'):
@@ -83,16 +107,78 @@ def generate_image(img_RGB, path, is_shown=False):
 
 
 def auto_generate_image(img_RGB):
+    """
+    Function to automatically generate the image from user's original image.
+
+    :param img_RGB: original image
+    :return: image
+    """
     final_img = generate_image(img_RGB, path="./img/result/auto/", is_shown=False)
     return final_img
 
 
 def generate_example_image(img_RGB):
+    """
+    Function to generate the example demo step by step.
+
+    :param img_RGB: original image
+    :return: image
+    """
     final_img = generate_image(img_RGB, path="./img/result/example/", is_shown=True)
     return final_img
 
 
-# Title of project
+def customize_image(img_RGB, is_shown=True):
+    """
+    Function helper to customize the final image from the original image.
+
+    :param img_RGB: original image
+    :param is_shown: whether showing image or not
+    :return: image result
+    """
+    # Initialize path, which is where we going to store the image result
+    path = "./img/result/customize/"
+
+    if len(img_RGB) != 0:
+        # Gray scale
+        with st.spinner('Please waiting...'):
+            gray_img = convert_color_space_RGB_to_GRAY(img_RGB)
+        gray_img = save_and_display_image(gray_img, "Gray scale", path, is_shown, False)
+
+        # Median blur
+        with st.spinner('Please waiting...'):
+            img_median = MedianFiltering(gray_img, 5)
+        img_median = save_and_display_image(img_median, "Median Blurring with kernel (5x5)", path, is_shown, False)
+
+        # Sobel
+        with st.spinner('Please waiting...'):
+            img_sobel = sobel(img_median)
+        img_sobel = save_and_display_image(img_sobel, "Sobel Edge Detection 1", path, is_shown, False)
+
+        with st.spinner('Please waiting...'):
+            img_sobel2 = cv2.bitwise_not(img_sobel)
+        img_sobel2 = save_and_display_image(img_sobel2, "Sobel Edge Detection 2", path, is_shown, False)
+
+        # Remove noise
+        with st.spinner('Please waiting...'):
+            img_bilateral = bilateral_filter(img_RGB, 30, 0.1, 1)
+        img_bilateral = save_and_display_image(img_bilateral, "Bilateral Blurring", path, is_shown, False)
+
+        # Color quantization
+        with st.spinner('Please waiting...'):
+            img_quantization = k_mean(img_bilateral)
+        img_quantization = save_and_display_image(img_quantization, "Color Quantization", path, is_shown, False)
+
+        with st.spinner('Please waiting...'):
+            final_img = cv2.bitwise_and(img_quantization, img_quantization, mask=img_sobel2)
+        final_img = save_and_display_image(final_img, "Color Quantization", path, True, True)
+        return final_img
+    return np.array(([]))
+
+
+# ==================================================================================================================== #
+# USER INTERFACE
+# ==================================================================================================================== #
 st.title("Real Image To Artistic Picture Transformation")
 
 section = st.sidebar.selectbox(
@@ -115,4 +201,10 @@ elif section == "Auto Generate":
     # Upload image
     original_img = upload_image(isShown=True)
     auto_generate_image(original_img)
+    st.stop()
+
+elif section == "Customize":
+    # Upload image
+    original_img = upload_image(isShown=True)
+    customize_image(original_img)
     st.stop()
