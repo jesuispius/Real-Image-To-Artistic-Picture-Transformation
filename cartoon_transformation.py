@@ -2,7 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from upload_image import upload_image
-from filtering import mean_filter, bilateral_filter, gaussian_filter
+from filtering import mean_filter, bilateral_filter, median_filter, gaussian_filters,sobel_filters
 
 
 # ============================================================================================================= #
@@ -36,7 +36,7 @@ def generate_cartoon_image(img):
         gray_img = cv2.cvtColor(original_img, cv2.COLOR_RGB2GRAY)
 
         image = gray_img
-        image = sobel_filter(image)
+        image = sobel_filters(image)
         # edge_mask = cv2.adaptiveThreshold(
         #     image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 7)
         # edge_mask = sobel_filter(image)

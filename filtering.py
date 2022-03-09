@@ -25,7 +25,7 @@ EPSILON = 1e-8
 # -------------------------------------------------------------------------------------------------------------------- #
 # MEDIAN FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
-def MedianFiltering(img, kernel_size):
+def run_median_filter(file_name, start_row, end_row, im, kernel_size):
     """
     Median Filtering Function.
 
@@ -34,22 +34,36 @@ def MedianFiltering(img, kernel_size):
     :return: the image after applying median filter
     """
     # Initialisation
-    output_img = np.zeros_like(img)
     edge = math.floor(kernel_size / 2)
+    output_img = np.zeros_like(im[start_row:end_row, :])
 
-    for x in range(edge, img.shape[0] - edge):
-        for y in range(edge, img.shape[1] - edge):
+    begin_row = start_row
+
+    if begin_row == 0:
+        begin_row = begin_row + edge
+
+    stop_row = end_row
+
+    if stop_row == im.shape[0]:
+        stop_row = im.shape[0] - edge
+
+    for x in range(begin_row, stop_row):
+        for y in range(edge, im.shape[1] - edge):
             # Taking out the image matrix corresponding to the kernel size
-            mask_img = img[x - edge: x + edge + 1, y - edge: y + edge + 1]
+            mask_img = im[x - edge: x + edge + 1, y - edge: y + edge + 1]
 
             # Sort the pixel in ascending order
             median = np.sort(np.ravel(mask_img))
 
             # Getting the median value from the sorted list
             median_val = int(kernel_size * kernel_size / 2)
-            output_img[x, y] = median[median_val]
+            output_img[x-start_row, y] = median[median_val]
 
-    return output_img
+    pickle.dump(output_img, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
+
+
+def median_filter(image, kernel_size=3):
+    return run_parallel(image, run_median_filter, (kernel_size, ))
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -146,6 +160,7 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
 # -------------------------------------------------------------------------------------------------------------------- #
 # mean FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
+
 
 def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
     sum_fr = np.zeros(input_image.shape)
@@ -439,4 +454,4 @@ def run_parallel(im, func, parameters=()):
             os.remove(file)
 
     os.rmdir(current_path)
-    return np.vstack(np.array(combine_image, dtype=object))
+    return np.vstack(np.array(combine_image))
