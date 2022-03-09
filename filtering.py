@@ -10,6 +10,7 @@ import numpy as np
 import math
 from multiprocessing import Pool
 import pickle
+from scipy import signal
 
 # Global Variable
 TWO_PI = 2.0 * math.pi
@@ -276,3 +277,26 @@ def gaussian_filter(input_image, sigma_space=10.0, radius_window_width=1):
 
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
 
+
+def sobel(img):
+    # 3x3 sobel kernel for the horizontal direction
+    Mx = np.array([[-1, 0, 1],
+                   [-2, 0, 2],
+                   [-1, 0, 1]], dtype=np.float32)
+
+    # 3x3 sobel kernel for the vertical direction
+    My = np.array([[1, 2, 1],
+                   [0, 0, 0],
+                   [-1, -2, -1]], dtype=np.float32)
+
+    # Measure the gradient component in each orientation
+    # ..., after convolving the Sobel kernel to the original image
+    # Horizontal direction
+    Gx = signal.convolve2d(img, Mx, boundary='symm', mode='same')
+
+    # Vertical direction
+    Gy = signal.convolve2d(img, My, boundary='symm', mode='same')
+
+    # Find the absolute magnitude of the gradient at each pixel
+    gradient_magnitude = np.sqrt(Gx * Gx + Gy * Gy)
+    return gradient_magnitude

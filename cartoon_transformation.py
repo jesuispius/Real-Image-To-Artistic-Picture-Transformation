@@ -2,7 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from upload_image import upload_image
-from filtering import GaussianFiltering, mean_filter, bilateral_filter, gaussian_filter,sobel_filter
+from filtering import mean_filter, bilateral_filter, gaussian_filter
 
 
 # ============================================================================================================= #
