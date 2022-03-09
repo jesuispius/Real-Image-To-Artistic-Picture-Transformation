@@ -10,7 +10,11 @@ import numpy as np
 import math
 from multiprocessing import Pool
 import pickle
-from scipy import signal
+import random
+from scipy import ndimage
+import string
+
+from color_transfer import convert_color_space_RGB_to_GRAY
 
 # Global Variable
 TWO_PI = 2.0 * math.pi
@@ -64,17 +68,18 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
 
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
 
-            fr = gs * gaussian_kernel((w_image - input_image) ** 2, sigma_intensity)
+            fr = gs * gaussian_kernel((w_image - input_image)
+                                      ** 2, sigma_intensity)
 
             sum_gs_fr += w_image * fr
             sum_fr += fr
 
     pickle.dump(sum_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
-                pickle.HIGHEST_PROTOCOL)
+        pickle.HIGHEST_PROTOCOL)
     pickle.dump(sum_gs_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
-                pickle.HIGHEST_PROTOCOL)
+        pickle.HIGHEST_PROTOCOL)
 
 
 def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_window_width=1):
@@ -138,10 +143,10 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
 
     return (sum_gs_fr * 255.0).clip(0.0, 255.0).astype(np.uint8)
 
+# -------------------------------------------------------------------------------------------------------------------- #
+# mean FILTERING
+# -------------------------------------------------------------------------------------------------------------------- #
 
-# -------------------------------------------------------------------------------------------------------------------- #
-# MEAN FILTERING
-# -------------------------------------------------------------------------------------------------------------------- #
 def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
     sum_fr = np.zeros(input_image.shape)
 
@@ -207,96 +212,231 @@ def mean_filter(input_image, radius_window_width=1):
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
 
 
+def convolve(image, filter):
+    if len(image.shape) > 2:
+        filter_expand = np.stack([filter] * image.shape[2], axis=2)
+    else:
+        filter_expand = filter
+
+    return ndimage.filters.convolve(image, filter_expand)
+
 # -------------------------------------------------------------------------------------------------------------------- #
 # GAUSSIAN FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
-def run_gaussian_filter(start_col, end_col, window_width, thread_id, input_image, sigma_space):
-    def gaussian_kernel(data, sigma):
-        return (1 / (TWO_PI * sigma * sigma)) * np.exp(-((data) / (2.0 * sigma ** 2)))
-
-    sum_fr = np.zeros(input_image.shape)
-
-    for w_col in range(start_col, end_col):
-        for w_row in range(-window_width, window_width + 1):
-            gs = gaussian_kernel(w_col ** 2 + w_row ** 2, sigma_space)
-
-            w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
-
-            sum_fr += gs * w_image
-
-    pickle.dump(sum_fr, open(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gaussian_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
-                pickle.HIGHEST_PROTOCOL)
 
 
-def gaussian_filter(input_image, sigma_space=10.0, radius_window_width=1):
-    responses = []
+def gaussian_kernel(size, sigma=1):
+    size = int(size) // 2
+    x, y = np.mgrid[-size:size+1, -size:size+1]
+    normal = 1 / (2.0 * np.pi * sigma**2)
+    g = np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
+    return g
 
-    pool = Pool(processes=MAX_PROCESS_NUM)
 
-    windows_width = radius_window_width
-    total_window_length = 2 * windows_width + 1
+def gaussian_filters(img, kernel_size=3, sigma=1):
+    g_kernel_matrix = gaussian_kernel(kernel_size, sigma)
 
-    rows_every_workers = total_window_length // MAX_PROCESS_NUM
-    start_row = -windows_width
-    end_row = start_row + rows_every_workers
+    return convolve(img, g_kernel_matrix)
 
-    data = input_image
 
-    for r in range(0, MAX_PROCESS_NUM):
-        args = (start_row, end_row, windows_width, r,
-                data, sigma_space)
-        res = pool.apply_async(run_gaussian_filter, args)
+# -------------------------------------------------------------------------------------------------------------------- #
+# SOBEL FILTERING
+# -------------------------------------------------------------------------------------------------------------------- #
 
-        responses.append(res)
+def sobel_filters(img):
+    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
 
-        start_row += rows_every_workers
+    Ix = convolve(img, Kx)
+    Iy = convolve(img, Ky)
 
-        if r == MAX_PROCESS_NUM - 2:
-            end_row = windows_width + 1
+    G = np.hypot(Ix, Iy)
+    G = G / G.max() * 255
+    theta = np.arctan2(Iy, Ix)
+
+    return (G, theta)
+
+
+# -------------------------------------------------------------------------------------------------------------------- #
+# NON MAX SUPPESSION
+# -------------------------------------------------------------------------------------------------------------------- #
+def non_max_suppression(img, gradient_angle):
+    return run_parallel(img, run_non_max_suppression, (gradient_angle,))
+
+
+def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
+    rows = im.shape[0]
+    cols = im.shape[1]
+
+    result = np.zeros((end_row - start_row, cols), dtype=np.int32)
+
+    begin_row = start_row
+    if start_row == 0:
+        begin_row = 1
+    if end_row == rows:
+        end_row = rows-1
+
+    angle = gradient_angle * 180. / np.pi
+    angle[angle < 0] += 180
+
+    for i in range(begin_row, end_row):
+        for j in range(1, cols-1):
+            q = 255
+            r = 255
+
+            # angle 0
+            if (0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180):
+                q = im[i, j+1]
+                r = im[i, j-1]
+            # angle 45
+            elif (22.5 <= angle[i, j] < 67.5):
+                q = im[i+1, j-1]
+                r = im[i-1, j+1]
+            # angle 90
+            elif (67.5 <= angle[i, j] < 112.5):
+                q = im[i+1, j]
+                r = im[i-1, j]
+            # angle 135
+            elif (112.5 <= angle[i, j] < 157.5):
+                q = im[i-1, j-1]
+                r = im[i+1, j+1]
+
+            if (im[i, j] >= q) and (im[i, j] >= r):
+                result[i - start_row, j] = im[i, j]
+            else:
+                result[i - start_row, j] = 0
+
+    pickle.dump(result, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
+
+# -------------------------------------------------------------------------------------------------------------------- #
+# THRESHOLD
+# -------------------------------------------------------------------------------------------------------------------- #
+
+
+def threshold(img, low_threshold=15, high_threshold=30):
+    res = np.zeros_like(img, dtype=int)
+
+    weak = 80
+    strong = 255
+
+    strong_x_cord, strong_y_cord = np.where(img >= high_threshold)
+
+    weak_x_cord, weak_y_cord = np.where(
+        (img < high_threshold) & (img >= low_threshold))
+
+    res[strong_x_cord, strong_y_cord] = strong
+    res[weak_x_cord, weak_y_cord] = weak
+
+    return (res, weak, strong)
+
+
+# -------------------------------------------------------------------------------------------------------------------- #
+# HYSTERESIS
+# -------------------------------------------------------------------------------------------------------------------- #
+def hysteresis(img, weak=127, strong=255):
+    return run_parallel(img, run_hysteresis, (weak, strong))
+# Edge Tracking by Hysteresis
+
+
+def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
+    rows = im.shape[0]
+    cols = im.shape[1]
+
+    begin_row = start_row
+    if start_row == 0:
+        begin_row == 1
+
+    stop_row = end_row
+    if end_row == 0:
+        stop_row == rows - 1
+
+    for i in range(begin_row, stop_row):
+        for j in range(1, cols-1):
+            if (im[i, j] == weak):
+                if (im[i+1, j-1] == strong) or (im[i+1, j] == strong) or (im[i+1, j+1] == strong) \
+                        or (im[i, j-1] == strong) or (im[i, j+1] == strong) \
+                        or (im[i-1, j-1] == strong) or (im[i-1, j] == strong) or (im[i-1, j+1] == strong):
+                    im[i, j] = strong
+                else:
+                    im[i, j] = 0
+
+    pickle.dump(im[start_row:end_row, :], open(
+        file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
+
+# -------------------------------------------------------------------------------------------------------------------- #
+# CANNY EDGE DETECTION
+# -------------------------------------------------------------------------------------------------------------------- #
+
+
+def canny_edge_detection(img):
+    if len(img.shape) > 2:
+        I = convert_color_space_RGB_to_GRAY(img)
+    else:
+        I = img
+
+    # Noise reduce by gaussian
+    I = gaussian_filters(I)
+
+    (I, gradient_angle) = sobel_filters(I)
+
+    I = non_max_suppression(I, gradient_angle)
+
+    (I, weak, strong) = threshold(I)
+
+    I = hysteresis(I, weak, strong)
+
+    return I
+
+
+def run_parallel(im, func, parameters=()):
+    def generate_file_name():
+        letters = string.ascii_lowercase
+        return ''.join(random.choice(letters) for _ in range(10))
+
+    rows = im.shape[0]
+
+    process_result_list = []
+    workers = Pool(processes=MAX_THREAD)
+
+    rows_for_workers = rows // MAX_THREAD
+    start_row = 0
+    end_row = rows_for_workers
+
+    list_files = []
+
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    temp_folder = generate_file_name()
+    current_path = os.path.join(current_path, temp_folder)
+    os.mkdir(current_path)
+
+    for process_num in range(0, MAX_THREAD):
+
+        if end_row > start_row:
+            file_name = generate_file_name()
+            file_name = os.path.join(current_path, file_name)
+            list_files.append(file_name)
+
+            args = (file_name, start_row, end_row, im) + parameters
+            process_result = workers.apply_async(func, args)
+            process_result_list.append(process_result)
+
+        start_row += rows_for_workers
+
+        if process_num == MAX_THREAD - 2:
+            end_row = rows
         else:
-            end_row += rows_every_workers
+            end_row += rows_for_workers
 
-    for res in responses:
-        res.wait()
+    for process_result in process_result_list:
+        process_result.wait()
 
-    sum_fr = None
+    combine_image = []
 
-    for thread_id in range(0, MAX_PROCESS_NUM):
+    for file in list_files:
+        data = pickle.load(open(file, "rb"))
+        if data is not None:
+            combine_image.append(data)
+            os.remove(file)
 
-        if thread_id == 0:
-            sum_fr = pickle.load(
-                open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
-        else:
-            sum_fr += pickle.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                    'gaussian_sum_fr{0}.tmp'.format(thread_id)), "rb"))
-
-        os.remove(os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'gaussian_sum_fr{0}.tmp'.format(thread_id)))
-
-    return sum_fr.clip(0.0, 255.0).astype(np.uint8)
-
-
-def sobel(img):
-    # 3x3 sobel kernel for the horizontal direction
-    Mx = np.array([[-1, 0, 1],
-                   [-2, 0, 2],
-                   [-1, 0, 1]], dtype=np.float32)
-
-    # 3x3 sobel kernel for the vertical direction
-    My = np.array([[1, 2, 1],
-                   [0, 0, 0],
-                   [-1, -2, -1]], dtype=np.float32)
-
-    # Measure the gradient component in each orientation
-    # ..., after convolving the Sobel kernel to the original image
-    # Horizontal direction
-    Gx = signal.convolve2d(img, Mx, boundary='symm', mode='same')
-
-    # Vertical direction
-    Gy = signal.convolve2d(img, My, boundary='symm', mode='same')
-
-    # Find the absolute magnitude of the gradient at each pixel
-    gradient_magnitude = np.sqrt(Gx * Gx + Gy * Gy)
-    return gradient_magnitude
+    os.rmdir(current_path)
+    return np.vstack(np.array(combine_image, dtype=object))
