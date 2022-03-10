@@ -9,7 +9,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from upload_image import upload_image, read_image
-from filtering import bilateral_filter, MedianFiltering, sobel
+from filtering import bilateral_filter, median_filter, sobel_filters
 from color_transfer import convert_color_space_RGB_to_GRAY, convert_color_space_RGB_to_BGR
 from testmediancut import k_mean
 
@@ -77,12 +77,12 @@ def generate_image(img_RGB, path, is_shown=False):
 
         # Median blur
         with st.spinner('Please waiting...'):
-            img_median = MedianFiltering(gray_img, 5)
+            img_median = median_filter(gray_img, 5)
         img_median = save_and_display_image(img_median, "Median Blurring with kernel (5x5)", path, is_shown, False)
 
         # Sobel
         with st.spinner('Please waiting...'):
-            img_sobel = sobel(img_median)
+            img_sobel = sobel_filters(img_median)
         img_sobel = save_and_display_image(img_sobel, "Sobel Edge Detection 1", path, is_shown, False)
 
         with st.spinner('Please waiting...'):
@@ -147,12 +147,12 @@ def customize_image(img_RGB, is_shown=True):
 
         # Median blur
         with st.spinner('Please waiting...'):
-            img_median = MedianFiltering(gray_img, 5)
+            img_median = median_filter(gray_img, 5)
         img_median = save_and_display_image(img_median, "Median Blurring with kernel (5x5)", path, is_shown, False)
 
         # Sobel
         with st.spinner('Please waiting...'):
-            img_sobel = sobel(img_median)
+            img_sobel = sobel_filters(img_median)
         img_sobel = save_and_display_image(img_sobel, "Sobel Edge Detection 1", path, is_shown, False)
 
         with st.spinner('Please waiting...'):
