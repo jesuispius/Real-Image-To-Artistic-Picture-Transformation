@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 
 
 def median_cut_quantize(img, img_arr):
@@ -43,15 +42,14 @@ def split_into_buckets(img, img_arr, depth):
     split_into_buckets(img, img_arr[median_index:], depth - 1)
 
 
-def k_mean(sample_img):
+def color_quantization(img, num_of_color=5):
     flattened_img_array = []
-    for r, rows in enumerate(sample_img):
+    for r, rows in enumerate(img):
         for c, color in enumerate(rows):
             flattened_img_array.append([color[0], color[1], color[2], r, c])
 
     flattened_img_array = np.array(flattened_img_array)
 
-    # the 3rd parameter represents how many colors are needed in the power of 2. If the parameter
-    # passed is 4 its means 2^4 = 16 colors
-    split_into_buckets(sample_img, flattened_img_array, 5)
-    return sample_img
+    # generate a palette with a number of colors that is a power of two
+    split_into_buckets(img, flattened_img_array, num_of_color)
+    return img

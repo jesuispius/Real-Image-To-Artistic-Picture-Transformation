@@ -11,7 +11,7 @@ import numpy as np
 from upload_image import upload_image, read_image
 from filtering import bilateral_filter, median_filter, sobel_filter, gaussian_filters
 from color_transfer import convert_color_space_RGB_to_GRAY, convert_color_space_RGB_to_BGR
-from testmediancut import k_mean
+from color_quantization import color_quantization
 
 
 @st.cache(suppress_st_warning=True)
@@ -100,7 +100,7 @@ def generate_image(img_RGB, path, is_shown=False, is_saved=False):
 
         # Color quantization
         with st.spinner('Please waiting...'):
-            img_quantization = k_mean(img_bilateral)
+            img_quantization = color_quantization(img_bilateral, 5)
         img_quantization = save_and_display_image(img_quantization, "Color Quantization", path, is_shown, False,
                                                   is_saved)
 
@@ -191,7 +191,7 @@ def customize_image(img_RGB, is_shown=True):
 
         # Color quantization
         with st.spinner('Please waiting...'):
-            img_quantization = k_mean(img_bilateral)
+            img_quantization = color_quantization(img_bilateral)
         img_quantization = save_and_display_image(img_quantization, "Color Quantization", path, is_shown, False)
 
         with st.spinner('Please waiting...'):
