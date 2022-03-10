@@ -18,12 +18,12 @@ import timeit
 
 from color_transfer import convert_color_space_RGB_to_GRAY
 
+
 # Global Variable
 TWO_PI = 2.0 * math.pi
 MAX_THREAD = 6
 MAX_PROCESS_NUM = 6
 EPSILON = 1e-8
-MAX_THREAD = 6
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -176,10 +176,11 @@ def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
             sum_fr += w_image
 
-    pickle.dump(sum_fr,
-                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)),
-                     'wb'),
-                pickle.HIGHEST_PROTOCOL)
+    pickle.dump(
+        sum_fr,
+        open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
+        pickle.HIGHEST_PROTOCOL
+    )
 
 
 def mean_filter(input_image, radius_window_width=1):
@@ -271,9 +272,8 @@ def sobel_filter(img):
 
     G = np.hypot(Ix, Iy)
     G = G / G.max() * 255
-   
-    return G
 
+    return G
 
 
 def sobel_filters(img):
@@ -471,7 +471,6 @@ def run_parallel(im, func, parameters=()):
 
     os.rmdir(current_path)
     return np.vstack(np.array(combine_image))
-
 
 # if __name__ == '__main__':
 #     file_name = "./img_test/image1.jpg"
