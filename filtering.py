@@ -23,6 +23,7 @@ TWO_PI = 2.0 * math.pi
 MAX_THREAD = 6
 MAX_PROCESS_NUM = 6
 EPSILON = 1e-8
+MAX_THREAD = 6
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -32,7 +33,10 @@ def run_median_filter(file_name, start_row, end_row, im, kernel_size):
     """
     Median Filtering Function.
 
-    :param img: image
+    :param file_name: filename
+    :param start_row: start row
+    :param end_row:
+    :param im: image
     :param kernel_size: kernel size of filter
     :return: the image after applying median filter
     """
@@ -60,13 +64,13 @@ def run_median_filter(file_name, start_row, end_row, im, kernel_size):
 
             # Getting the median value from the sorted list
             median_val = int(kernel_size * kernel_size / 2)
-            output_img[x-start_row, y] = median[median_val]
+            output_img[x - start_row, y] = median[median_val]
 
     pickle.dump(output_img, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
 
 
 def median_filter(image, kernel_size=3):
-    return run_parallel(image, run_median_filter, (kernel_size, ))
+    return run_parallel(image, run_median_filter, (kernel_size,))
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -93,10 +97,10 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
 
     pickle.dump(sum_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
-        pickle.HIGHEST_PROTOCOL)
+                pickle.HIGHEST_PROTOCOL)
     pickle.dump(sum_gs_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
-        pickle.HIGHEST_PROTOCOL)
+                pickle.HIGHEST_PROTOCOL)
 
 
 def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_window_width=1):
@@ -160,11 +164,10 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
 
     return (sum_gs_fr * 255.0).clip(0.0, 255.0).astype(np.uint8)
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 # mean FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
-
-
 def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
     sum_fr = np.zeros(input_image.shape)
 
@@ -230,24 +233,23 @@ def mean_filter(input_image, radius_window_width=1):
     return sum_fr.clip(0.0, 255.0).astype(np.uint8)
 
 
-def convolve(image, filter):
+def convolve(image, filtered):
     if len(image.shape) > 2:
-        filter_expand = np.stack([filter] * image.shape[2], axis=2)
+        filter_expand = np.stack([filtered] * image.shape[2], axis=2)
     else:
-        filter_expand = filter
+        filter_expand = filtered
 
     return ndimage.filters.convolve(image, filter_expand)
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 # GAUSSIAN FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
-
-
 def gaussian_kernel(size, sigma=1):
     size = int(size) // 2
-    x, y = np.mgrid[-size:size+1, -size:size+1]
-    normal = 1 / (2.0 * np.pi * sigma**2)
-    g = np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
+    x, y = np.mgrid[-size:size + 1, -size:size + 1]
+    normal = 1 / (2.0 * np.pi * sigma ** 2)
+    g = np.exp(-((x ** 2 + y ** 2) / (2.0 * sigma ** 2))) * normal
     return g
 
 
@@ -285,11 +287,11 @@ def sobel_filters(img):
     G = G / G.max() * 255
     theta = np.arctan2(Iy, Ix)
 
-    return (G, theta)
+    return G, theta
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
-# NON MAX SUPPESSION
+# NON MAX SUPPRESSION
 # -------------------------------------------------------------------------------------------------------------------- #
 def non_max_suppression(img, gradient_angle):
     return run_parallel(img, run_non_max_suppression, (gradient_angle,))
@@ -305,32 +307,32 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
     if start_row == 0:
         begin_row = 1
     if end_row == rows:
-        end_row = rows-1
+        end_row = rows - 1
 
     angle = gradient_angle * 180. / np.pi
     angle[angle < 0] += 180
 
     for i in range(begin_row, end_row):
-        for j in range(1, cols-1):
+        for j in range(1, cols - 1):
             q = 255
             r = 255
 
             # angle 0
             if (0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180):
-                q = im[i, j+1]
-                r = im[i, j-1]
+                q = im[i, j + 1]
+                r = im[i, j - 1]
             # angle 45
-            elif (22.5 <= angle[i, j] < 67.5):
-                q = im[i+1, j-1]
-                r = im[i-1, j+1]
+            elif 22.5 <= angle[i, j] < 67.5:
+                q = im[i + 1, j - 1]
+                r = im[i - 1, j + 1]
             # angle 90
-            elif (67.5 <= angle[i, j] < 112.5):
-                q = im[i+1, j]
-                r = im[i-1, j]
+            elif 67.5 <= angle[i, j] < 112.5:
+                q = im[i + 1, j]
+                r = im[i - 1, j]
             # angle 135
-            elif (112.5 <= angle[i, j] < 157.5):
-                q = im[i-1, j-1]
-                r = im[i+1, j+1]
+            elif 112.5 <= angle[i, j] < 157.5:
+                q = im[i - 1, j - 1]
+                r = im[i + 1, j + 1]
 
             if (im[i, j] >= q) and (im[i, j] >= r):
                 result[i - start_row, j] = im[i, j]
@@ -339,11 +341,10 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
 
     pickle.dump(result, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 # THRESHOLD
 # -------------------------------------------------------------------------------------------------------------------- #
-
-
 def threshold(img, low_threshold=15, high_threshold=30):
     res = np.zeros_like(img, dtype=int)
 
@@ -358,7 +359,7 @@ def threshold(img, low_threshold=15, high_threshold=30):
     res[strong_x_cord, strong_y_cord] = strong
     res[weak_x_cord, weak_y_cord] = weak
 
-    return (res, weak, strong)
+    return res, weak, strong
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -366,9 +367,9 @@ def threshold(img, low_threshold=15, high_threshold=30):
 # -------------------------------------------------------------------------------------------------------------------- #
 def hysteresis(img, weak=127, strong=255):
     return run_parallel(img, run_hysteresis, (weak, strong))
+
+
 # Edge Tracking by Hysteresis
-
-
 def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
     rows = im.shape[0]
     cols = im.shape[1]
@@ -382,11 +383,11 @@ def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
         stop_row == rows - 1
 
     for i in range(begin_row, stop_row):
-        for j in range(1, cols-1):
-            if (im[i, j] == weak):
-                if (im[i+1, j-1] == strong) or (im[i+1, j] == strong) or (im[i+1, j+1] == strong) \
-                        or (im[i, j-1] == strong) or (im[i, j+1] == strong) \
-                        or (im[i-1, j-1] == strong) or (im[i-1, j] == strong) or (im[i-1, j+1] == strong):
+        for j in range(1, cols - 1):
+            if im[i, j] == weak:
+                if (im[i + 1, j - 1] == strong) or (im[i + 1, j] == strong) or (im[i + 1, j + 1] == strong) \
+                        or (im[i, j - 1] == strong) or (im[i, j + 1] == strong) \
+                        or (im[i - 1, j - 1] == strong) or (im[i - 1, j] == strong) or (im[i - 1, j + 1] == strong):
                     im[i, j] = strong
                 else:
                     im[i, j] = 0
@@ -394,11 +395,10 @@ def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
     pickle.dump(im[start_row:end_row, :], open(
         file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
 
+
 # -------------------------------------------------------------------------------------------------------------------- #
 # CANNY EDGE DETECTION
 # -------------------------------------------------------------------------------------------------------------------- #
-
-
 def canny_edge_detection(img):
     if len(img.shape) > 2:
         I = convert_color_space_RGB_to_GRAY(img)
