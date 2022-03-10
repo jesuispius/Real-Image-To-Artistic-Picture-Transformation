@@ -13,6 +13,9 @@ import pickle
 import random
 from scipy import ndimage
 import string
+
+import timeit
+
 from color_transfer import convert_color_space_RGB_to_GRAY
 
 

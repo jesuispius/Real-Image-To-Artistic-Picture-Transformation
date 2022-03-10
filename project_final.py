@@ -210,13 +210,13 @@ section = st.sidebar.selectbox(
     label="Choose a section:",
     options=[
         "",
-        "Example",
+        "Example 1",
         "Auto Generate",
         "Customize"
     ]
 )
 
-if section == "Example":
+if section == "Example 1":
     # Upload image
     original_img = read_image("./img/src/christopher.jpg")
     generate_example_image(original_img)
