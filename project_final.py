@@ -12,6 +12,7 @@ from upload_image import upload_image, read_image
 from filtering import bilateral_filter, median_filter, sobel_filter, gaussian_filters
 from color_transfer import convert_color_space_RGB_to_GRAY, convert_color_space_RGB_to_BGR
 from color_quantization import color_quantization
+from our_algorithm import landscape_pictures
 
 
 @st.cache(suppress_st_warning=True)
@@ -180,56 +181,57 @@ def customize_image(img_RGB, is_shown=True):
             img_sobel = sobel_filter(img_median)
         img_sobel = save_and_display_image(img_sobel, "Sobel Edge Detection 1", path, is_shown, False)
 
-        with st.spinner('Please waiting...'):
-            img_sobel2 = cv2.bitwise_not(img_sobel)
-        img_sobel2 = save_and_display_image(img_sobel2, "Sobel Edge Detection 2", path, is_shown, False)
-
-        # Remove noise
-        with st.spinner('Please waiting...'):
-            img_bilateral = bilateral_filter(img_RGB, 30, 0.1, 1)
-        img_bilateral = save_and_display_image(img_bilateral, "Bilateral Blurring", path, is_shown, False)
-
-        # Color quantization
-        with st.spinner('Please waiting...'):
-            img_quantization = color_quantization(img_bilateral)
-        img_quantization = save_and_display_image(img_quantization, "Color Quantization", path, is_shown, False)
-
-        with st.spinner('Please waiting...'):
-            final_img = cv2.bitwise_and(img_quantization, img_quantization, mask=img_sobel2)
-        final_img = save_and_display_image(final_img, "Color Quantization", path, True, True)
-        return final_img
     return np.array(([]))
+
+
+def gen_landscape_image(img, path):
+    with st.spinner('Please waiting...'):
+        img_landscape = landscape_pictures(img)
+    img_landscape = save_and_display_image(img_landscape, "Landscape Image", path, True, True, False)
+    return img_landscape
 
 
 # ==================================================================================================================== #
 # USER INTERFACE
 # ==================================================================================================================== #
-st.title("Real Image To Artistic Picture Transformation")
-
 section = st.sidebar.selectbox(
     label="Choose a section:",
     options=[
         "",
         "Example 1",
         "Auto Generate",
-        "Customize"
+        "Customize",
+        "Landscape"
     ]
 )
 
 if section == "Example 1":
+    st.title("Real Image To Artistic Picture Transformation")
     # Upload image
     original_img = read_image("./img/src/christopher.jpg")
     generate_example_image(original_img)
     st.stop()
 
 elif section == "Auto Generate":
+    st.title("Real Image To Artistic Picture Transformation")
     # Upload image
     original_img = upload_image(isShown=True)
     auto_generate_image(original_img)
     st.stop()
 
 elif section == "Customize":
+    st.title("Real Image To Artistic Picture Transformation")
     # Upload image
     original_img = upload_image(isShown=True)
     customize_image(original_img)
     st.stop()
+
+elif section == "Landscape":
+    st.title("Real Image To Artistic Picture")
+    st.subheader("Artistic Landscape Picture Transformation")
+
+    # Upload image
+    original_img = upload_image(isShown=True)
+    if len(original_img) != 0:
+        gen_landscape_image(original_img, path="./img/result/landscape/")
+        st.stop()
