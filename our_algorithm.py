@@ -33,7 +33,6 @@ def landscape_pictures(I):
     return I
 
 
-<<<<<<< HEAD
 def portrait_pictures(I):
     start = timeit.default_timer()
     k = 5
@@ -71,12 +70,3 @@ if __name__ == '__main__':
     
 
     cv2.imwrite('./img_test/test2_result.jpg', I)   
-=======
-#if __name__ == '__main__':
-#    I = cv2.imread('./img_test/psu3.jpg',
- #                  cv2.COLOR_BGR2RGB).astype('float32')
-#
- #   I = landscape_pictures(I)
-#
- #   cv2.imwrite('./img_test/psu3_result.jpg', I)
->>>>>>> f0190f4644bd1abf4151d0ac2db7da2fda47b977
