@@ -32,13 +32,40 @@ def landscape_pictures(I):
     return I
 
 
+def portrait_pictures(I):
+    start = timeit.default_timer()
+    k = 5
+    for i in range(5):
+        I = bilateral_filter(I, k, k/100, k)
+
+    ip_gray = convert_color_space_RGB_to_GRAY(I)
+    
+    c = canny_edge_detection(ip_gray)
+    I = I - increase_dim(c,I)*0.1
+    I = I.clip(0.0, 255.0).astype(np.uint8)
+
+    stop = timeit.default_timer()
+    print('Time: ', stop - start)
+
+    return I
+
 if __name__ == '__main__':
 
-    I = cv2.imread('./img_test/psu3.jpg',
+    # I = cv2.imread('./img_test/psu3.jpg',
+    #             cv2.COLOR_BGR2RGB).astype('float32')  
+
+    
+    # I = landscape_pictures(I)
+    
+
+    # cv2.imwrite('./img_test/psu3_result.jpg', I)
+
+
+    I = cv2.imread('./img_test/test2.jpg',
                 cv2.COLOR_BGR2RGB).astype('float32')  
 
     
-    I = landscape_pictures(I)
+    I = portrait_pictures(I)
     
 
-    cv2.imwrite('./img_test/psu3_result.jpg', I)
+    cv2.imwrite('./img_test/test2_result.jpg', I)   
