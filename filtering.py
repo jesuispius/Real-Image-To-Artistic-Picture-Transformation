@@ -13,12 +13,15 @@ import pickle
 import random
 from scipy import ndimage
 import string
+import cv2
+import timeit
 
 from color_transfer import convert_color_space_RGB_to_GRAY
 
 # Global Variable
 TWO_PI = 2.0 * math.pi
-MAX_PROCESS_NUM = 2
+MAX_THREAD = 6
+MAX_PROCESS_NUM = 6
 EPSILON = 1e-8
 
 
@@ -257,6 +260,19 @@ def gaussian_filters(img, kernel_size=3, sigma=1):
 # -------------------------------------------------------------------------------------------------------------------- #
 # SOBEL FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
+def sobel_filter(img):
+    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+
+    Ix = convolve(img, Kx)
+    Iy = convolve(img, Ky)
+
+    G = np.hypot(Ix, Iy)
+    G = G / G.max() * 255
+   
+    return G
+
+
 
 def sobel_filters(img):
     Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
@@ -455,3 +471,16 @@ def run_parallel(im, func, parameters=()):
 
     os.rmdir(current_path)
     return np.vstack(np.array(combine_image))
+
+
+# if __name__ == '__main__':
+#     file_name = "./img_test/image1.jpg"
+#     img = cv2.imread(file_name)
+
+#     start = timeit.default_timer()
+#     new_img = sobel_filters(img)
+
+#     cv2.imwrite('./img_test/result2.png', new_img)
+
+#     stop = timeit.default_timer()
+#     print('Time: ', stop - start)
