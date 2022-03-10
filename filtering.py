@@ -348,7 +348,7 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
 def threshold(img, low_threshold=15, high_threshold=30):
     res = np.zeros_like(img, dtype=int)
 
-    weak = 80
+    weak = 1
     strong = 255
 
     strong_x_cord, strong_y_cord = np.where(img >= high_threshold)
