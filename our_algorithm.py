@@ -57,10 +57,10 @@ def portrait_pictures(I):
     return I
 
 if __name__ == '__main__':
-    img_path = './img_test/test1.jpg'
+    img_path = './img_test/phuoc.png'
 
     I = cv2.imread(img_path, cv2.COLOR_BGR2RGB).astype('float32')
 
     I = portrait_pictures(I)
 
-    cv2.imwrite('./img_test/test1_result.jpg', I)
+    cv2.imwrite('./img_test/phuoc_result.jpg', I)
