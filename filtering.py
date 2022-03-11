@@ -23,7 +23,10 @@ from color_transfer import convert_color_space_RGB_to_GRAY
 TWO_PI = 2.0 * math.pi
 MAX_THREAD = 6
 MAX_PROCESS_NUM = 6
-EPSILON = 1e-8
+PI_1_d_2 = np.pi /2
+PI_1_d_1 = np.pi 
+PI_3_d_4 = 3*np.pi /4
+PI_2_d_1 = 2*np.pi 
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -77,19 +80,22 @@ def median_filter(image, kernel_size=3):
 # BILATERAL FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
 def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_image, sigma_space, sigma_intensity):
-    def gaussian_kernel(r2, sigma):
-        return (np.exp(-0.5 * r2 / sigma ** 2) * 3).astype(int) * 1.0 / 3.0
+    # def gaussian_kernel(data, sigma):
+    #     return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
 
-    sum_fr = np.ones(input_image.shape) * EPSILON
-    sum_gs_fr = input_image * EPSILON
+    def our_kernel(data, sigma):
+        return np.round(np.exp(-0.5*((data)/(sigma**2)))).astype(np.float32)
+        
+    sum_fr = np.zeros(input_image.shape)
+    sum_gs_fr = np.zeros(input_image.shape)  # input_image * EPSILON
 
     for w_col in range(start_col, end_col):
         for w_row in range(-window_width, window_width + 1):
-            gs = gaussian_kernel(w_col ** 2 + w_row ** 2, sigma_space)
+            gs = our_kernel(w_col ** 2 + w_row ** 2, sigma_space)
 
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
 
-            fr = gs * gaussian_kernel((w_image - input_image)
+            fr = gs * our_kernel((w_image - input_image)
                                       ** 2, sigma_intensity)
 
             sum_gs_fr += w_image * fr
@@ -97,10 +103,10 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
 
     pickle.dump(sum_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
-                pickle.HIGHEST_PROTOCOL)
+        pickle.HIGHEST_PROTOCOL)
     pickle.dump(sum_gs_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
-                pickle.HIGHEST_PROTOCOL)
+        pickle.HIGHEST_PROTOCOL)
 
 
 def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_window_width=1):
@@ -178,7 +184,8 @@ def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
 
     pickle.dump(
         sum_fr,
-        open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
+        open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+             'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
         pickle.HIGHEST_PROTOCOL
     )
 
