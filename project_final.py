@@ -12,7 +12,7 @@ from upload_image import upload_image, read_image
 from filtering import bilateral_filter, median_filter, sobel_filter, gaussian_filters
 from color_transfer import convert_color_space_RGB_to_GRAY, convert_color_space_RGB_to_BGR
 from color_quantization import color_quantization
-from our_algorithm import landscape_pictures
+from our_algorithm import landscape_pictures, portrait_pictures
 
 
 @st.cache(suppress_st_warning=True)
@@ -112,17 +112,6 @@ def generate_image(img_RGB, path, is_shown=False, is_saved=False):
     return np.array(([]))
 
 
-def auto_generate_image(img_RGB):
-    """
-    Function to automatically generate the image from user's original image.
-
-    :param img_RGB: original image
-    :return: image
-    """
-    final_img = generate_image(img_RGB, path="./img/result/auto/", is_shown=False, is_saved=False)
-    return final_img
-
-
 def generate_example_image(img_RGB):
     """
     Function to generate the example demo step by step.
@@ -173,8 +162,8 @@ def customize_image(img_RGB, is_shown=True):
         elif blur_option == 'Gaussian':
             with st.spinner('Please waiting...'):
                 img_gaussian = gaussian_filters(gray_img, 5)
-            image_blur = save_and_display_image(img_gaussian, "Median Blurring with kernel (5x5)", path, is_shown, False)
-
+            image_blur = save_and_display_image(img_gaussian, "Median Blurring with kernel (5x5)", path, is_shown,
+                                                False)
 
         # Sobel
         with st.spinner('Please waiting...'):
@@ -191,47 +180,69 @@ def gen_landscape_image(img, path):
     return img_landscape
 
 
+def gen_portrait_image(img, path):
+    with st.spinner('Please waiting...'):
+        img_portrait = portrait_pictures(img)
+    img_portrait = save_and_display_image(img_portrait, "Portrait Image", path, True, True, False)
+    return img_portrait
+
+
 # ==================================================================================================================== #
 # USER INTERFACE
 # ==================================================================================================================== #
+st.title("Real Image To Artistic Picture")
 section = st.sidebar.selectbox(
     label="Choose a section:",
     options=[
         "",
-        "Example 1",
-        "Auto Generate",
         "Customize",
-        "Landscape"
+        "Landscape",
+        "Portrait",
+        "Example"
     ]
 )
 
-if section == "Example 1":
-    st.title("Real Image To Artistic Picture Transformation")
+if section == "":
+    st.header("Welcome to our application!")
+    st.subheader("Description:")
+    st.markdown('Our application is built to generate an artistic picture from a real image.')
+    st.subheader("Author:")
+    st.markdown('Phuoc Nguyen and Tri Le.')
+
+if section == "Example":
     # Upload image
     original_img = read_image("./img/src/christopher.jpg")
     generate_example_image(original_img)
     st.stop()
 
-elif section == "Auto Generate":
-    st.title("Real Image To Artistic Picture Transformation")
-    # Upload image
-    original_img = upload_image(isShown=True)
-    auto_generate_image(original_img)
-    st.stop()
-
 elif section == "Customize":
-    st.title("Real Image To Artistic Picture Transformation")
     # Upload image
     original_img = upload_image(isShown=True)
     customize_image(original_img)
     st.stop()
 
 elif section == "Landscape":
-    st.title("Real Image To Artistic Picture")
-    st.subheader("Artistic Landscape Picture Transformation")
+    # Sub header
+    st.header("Artistic Landscape Picture Transformation")
 
     # Upload image
     original_img = upload_image(isShown=True)
+
+    # Image processing
     if len(original_img) != 0:
+        st.subheader("Result: ")
         gen_landscape_image(original_img, path="./img/result/landscape/")
+        st.stop()
+
+elif section == "Portrait":
+    # Sub header
+    st.header("Artistic Portrait Picture Transformation")
+
+    # Upload image
+    original_img = upload_image(isShown=True)
+
+    # Image processing
+    if len(original_img) != 0:
+        st.subheader("Result: ")
+        gen_portrait_image(original_img, path="./img/result/portrait/")
         st.stop()
