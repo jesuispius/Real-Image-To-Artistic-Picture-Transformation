@@ -17,9 +17,9 @@ def increase_dim(e, I):
 
 def landscape_pictures(I):
     start = timeit.default_timer()
-    k = 5
-    for i in range(2):
-        I = bilateral_filter(I, k, k / 50, k)
+    k = 7
+    for i in range(3):
+        I = bilateral_filter(I, k, k / 100, k)
 
     ip_gray = convert_color_space_RGB_to_GRAY(I)
 
@@ -52,21 +52,21 @@ def portrait_pictures(I):
 
 if __name__ == '__main__':
 
-    # I = cv2.imread('./img_test/psu3.jpg',
-    #             cv2.COLOR_BGR2RGB).astype('float32')  
-
-    
-    # I = landscape_pictures(I)
-    
-
-    # cv2.imwrite('./img_test/psu3_result.jpg', I)
-
-
-    I = cv2.imread('./img_test/test2.jpg',
+    I = cv2.imread('./img_test/test3.jpg',
                 cv2.COLOR_BGR2RGB).astype('float32')  
 
     
     I = portrait_pictures(I)
     
 
-    cv2.imwrite('./img_test/test2_result.jpg', I)   
+    cv2.imwrite('./img_test/test3_result.jpg', I)
+
+
+    # I = cv2.imread('./img_test/psu1.jpg',
+    #             cv2.COLOR_BGR2RGB).astype('float32')  
+
+    
+    # I = landscape_pictures(I)
+    
+
+    # cv2.imwrite('./img_test/psu1_result.jpg', I)   
