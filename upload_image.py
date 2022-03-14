@@ -72,7 +72,14 @@ def upload_image(isShown=False):
 
 
 def read_image(filename):
+    """
+    Function to read the image.
+
+    :param filename: filename
+    :return:
+    """
     result = []
+
     if os.path.isfile(filename):
         # Read file using OpenCV
         img = cv2.imread(filename)
