@@ -1,5 +1,5 @@
 from upload_image import upload_image, read_image
-from filtering import bilateral_filter, median_filter, canny_edge_detection, sobel_filter
+from filtering import bilateral_filter, color_reducer, median_filter, canny_edge_detection, sobel_filter, layer_separation
 from color_transfer import convert_color_space_RGB_to_GRAY, convert_color_space_RGB_to_BGR
 import timeit
 import cv2
@@ -18,15 +18,31 @@ def increase_dim(e, I):
 
 def landscape_pictures(I):
     start = timeit.default_timer()
-    k = round(math.sqrt(I.shape[0]*I.shape[1])/500)*7
+    m = round(math.sqrt(I.shape[0]*I.shape[1])/500)
+    k = m*3
     if k < 1:
         k = 1
-    for i in range(3):
-        I = bilateral_filter(I, k, k / 100, k)
+
+    I = bilateral_filter(I, 2, 2 / 70, 2)
+
+    I = layer_separation(I, 5)
+
+    cv2.imwrite('./img_test/temp.jpg', I)
+
+    print('k =', k)
+    for _ in range(3):
+        I = bilateral_filter(I, k, k / 70, k)
 
     ip_gray = convert_color_space_RGB_to_GRAY(I)
 
-    c = canny_edge_detection(ip_gray)
+    h = m*3
+    if h < 3:
+        h = 3
+
+    print('h =', h)
+
+    c = canny_edge_detection(ip_gray, h)
+
     I = I - increase_dim(c, I)
     I = I.clip(0.0, 255.0).astype(np.uint8)
 
@@ -38,29 +54,41 @@ def landscape_pictures(I):
 
 def portrait_pictures(I):
     start = timeit.default_timer()
-    k = round(math.sqrt(I.shape[0]*I.shape[1])/500)*5
+    m = round(math.sqrt(I.shape[0]*I.shape[1])/500)
+    k = m*5
     if k < 1:
         k = 1
+    I = bilateral_filter(I, k, k / 100, k)
 
-    for i in range(5):
+
+   
+
+    I = layer_separation(I, 2)
+    cv2.imwrite('./img_test/temp.jpg', I)
+
+    print('k =', k)
+    for _ in range(3):
         I = bilateral_filter(I, k, k / 100, k)
 
     ip_gray = convert_color_space_RGB_to_GRAY(I)
-
     c = canny_edge_detection(ip_gray)
+    cv2.imwrite('./img_test/temp_canny.jpg', c)
+
+
     I = I - increase_dim(c, I) * 0.1
-    I = I.clip(0.0, 255.0).astype(np.uint8)
+    I = I.clip(0.0, 255.0)
 
     stop = timeit.default_timer()
     print('Time: ', stop - start)
 
     return I
 
-if __name__ == '__main__':
-    img_path = './img_test/phuoc.png'
 
-    I = cv2.imread(img_path, cv2.COLOR_BGR2RGB).astype('float32')
+# if __name__ == '__main__':
+#     img_path = './img_test/test1.jpg'
 
-    I = portrait_pictures(I)
+#     I = cv2.imread(img_path, cv2.COLOR_BGR2RGB).astype('float32')
 
-    cv2.imwrite('./img_test/phuoc_result.jpg', I)
+#     I = landscape_pictures(I)
+#     # I = portrait_pictures(I)
+#     cv2.imwrite('./img_test/_result.jpg', I)

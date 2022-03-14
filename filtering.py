@@ -5,6 +5,7 @@
 # ==================================================================================================================== #
 
 # Dependencies
+from cmath import pi
 import os
 import numpy as np
 import math
@@ -16,6 +17,8 @@ import string
 
 import timeit
 
+from sklearn import neighbors
+
 from color_transfer import convert_color_space_RGB_to_GRAY
 
 
@@ -23,10 +26,13 @@ from color_transfer import convert_color_space_RGB_to_GRAY
 TWO_PI = 2.0 * math.pi
 MAX_THREAD = 6
 MAX_PROCESS_NUM = 6
-PI_1_d_2 = np.pi /2
-PI_1_d_1 = np.pi 
-PI_3_d_4 = 3*np.pi /4
-PI_2_d_1 = 2*np.pi 
+
+
+PI_1_d_8 = math.pi / 8
+PI_1_d_4 = math.pi / 4
+PI_1_d_2 = math.pi / 2
+PI_3_d_4 = 3*math.pi / 4
+PI_1_d_1 = math.pi
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -84,8 +90,8 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
     #     return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
 
     def our_kernel(data, sigma):
-        return np.round(np.exp(-0.5*((data)/(sigma**2)))).astype(np.float32)
-        
+        return np.round(np.exp(-0.5*((data)/(sigma**2))))
+
     sum_fr = np.zeros(input_image.shape)
     sum_gs_fr = np.zeros(input_image.shape)  # input_image * EPSILON
 
@@ -96,7 +102,7 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
 
             fr = gs * our_kernel((w_image - input_image)
-                                      ** 2, sigma_intensity)
+                                 ** 2, sigma_intensity)
 
             sum_gs_fr += w_image * fr
             sum_fr += fr
@@ -104,6 +110,7 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
     pickle.dump(sum_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
         pickle.HIGHEST_PROTOCOL)
+
     pickle.dump(sum_gs_fr, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
         pickle.HIGHEST_PROTOCOL)
@@ -168,7 +175,7 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
 
     sum_gs_fr = sum_gs_fr / sum_fr
 
-    return (sum_gs_fr * 255.0).clip(0.0, 255.0).astype(np.uint8)
+    return (sum_gs_fr * 255.0).clip(0.0, 255.0)
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -238,7 +245,7 @@ def mean_filter(input_image, radius_window_width=1):
 
     sum_fr = sum_fr / (total_window_length ** 2)
 
-    return sum_fr.clip(0.0, 255.0).astype(np.uint8)
+    return sum_fr.clip(0.0, 255.0)
 
 
 def convolve(image, filtered):
@@ -313,33 +320,28 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
     begin_row = start_row
     if start_row == 0:
         begin_row = 1
+
     if end_row == rows:
         end_row = rows - 1
 
-    angle = gradient_angle * 180. / np.pi
-    angle[angle < 0] += 180
+    gradient_angle[gradient_angle < 0] += PI_1_d_1
+
+    run_angle = [(0, PI_1_d_8, (0, 1), (0, -1)),
+                 (PI_1_d_4 - PI_1_d_8, PI_1_d_4 + PI_1_d_8, (1, -1), (-1, 1)),
+                 (PI_1_d_2 - PI_1_d_8, PI_1_d_2 + PI_1_d_8, (1, 0), (-1, 0)),
+                 (PI_3_d_4 - PI_1_d_8, PI_3_d_4 + PI_1_d_8, (-1, -1), (1, 1)),
+                 (PI_1_d_1 - PI_1_d_8, PI_1_d_1, (0, 1), (0, -1))]
 
     for i in range(begin_row, end_row):
         for j in range(1, cols - 1):
             q = 255
             r = 255
 
-            # angle 0
-            if (0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180):
-                q = im[i, j + 1]
-                r = im[i, j - 1]
-            # angle 45
-            elif 22.5 <= angle[i, j] < 67.5:
-                q = im[i + 1, j - 1]
-                r = im[i - 1, j + 1]
-            # angle 90
-            elif 67.5 <= angle[i, j] < 112.5:
-                q = im[i + 1, j]
-                r = im[i - 1, j]
-            # angle 135
-            elif 112.5 <= angle[i, j] < 157.5:
-                q = im[i - 1, j - 1]
-                r = im[i + 1, j + 1]
+            for ra in run_angle:
+                if ra[0] <= gradient_angle[i, j] < ra[1]:
+                    q = im[i + ra[2][0], j + ra[2][1]]
+                    r = im[i + ra[3][0], j + ra[3][1]]
+                    break
 
             if (im[i, j] >= q) and (im[i, j] >= r):
                 result[i - start_row, j] = im[i, j]
@@ -389,14 +391,17 @@ def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
     if end_row == 0:
         stop_row == rows - 1
 
+    neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1),
+                 (0, 1), (1, -1), (1, 0), (1, 1)]
+
     for i in range(begin_row, stop_row):
         for j in range(1, cols - 1):
             if im[i, j] == weak:
-                if (im[i + 1, j - 1] == strong) or (im[i + 1, j] == strong) or (im[i + 1, j + 1] == strong) \
-                        or (im[i, j - 1] == strong) or (im[i, j + 1] == strong) \
-                        or (im[i - 1, j - 1] == strong) or (im[i - 1, j] == strong) or (im[i - 1, j + 1] == strong):
-                    im[i, j] = strong
-                else:
+                for n in neighbors:
+                    if (im[i + n[0], j + n[1]] == strong):
+                        im[i, j] = strong
+                        break
+                if im[i, j] == weak:
                     im[i, j] = 0
 
     pickle.dump(im[start_row:end_row, :], open(
@@ -406,14 +411,14 @@ def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
 # -------------------------------------------------------------------------------------------------------------------- #
 # CANNY EDGE DETECTION
 # -------------------------------------------------------------------------------------------------------------------- #
-def canny_edge_detection(img):
+def canny_edge_detection(img, gaussian_kernel=3, sigma=1):
     if len(img.shape) > 2:
         I = convert_color_space_RGB_to_GRAY(img)
     else:
         I = img
 
     # Noise reduce by gaussian
-    I = gaussian_filters(I)
+    I = gaussian_filters(I, gaussian_kernel, sigma)
 
     (I, gradient_angle) = sobel_filters(I)
 
@@ -478,6 +483,96 @@ def run_parallel(im, func, parameters=()):
 
     os.rmdir(current_path)
     return np.vstack(np.array(combine_image))
+
+
+def color_reducer(im, num_of_level):
+    return np.round(im / num_of_level)*num_of_level
+
+
+def layer_separation(input_image, threshold):
+    np.seterr(divide='ignore', invalid='ignore')
+    def is_similar(point1, point2, threshold):
+
+        a = point1
+        b = point2
+    
+        diff = np.abs(100.0*(a - b)/a)
+
+        if np.all(diff < threshold):
+            return True
+
+        return False
+
+    image = input_image
+
+    color_dict = {}
+    total_color_dict = {}
+
+    result = np.full(
+        (input_image.shape[0], input_image.shape[1]), -1, dtype=int)
+    result2 = np.full_like(input_image, 0, dtype=np.float64)
+
+    stack_similar = [(0, 0)]
+
+    stack_non_similar_dict = {}
+    stack_non_similar = []
+
+    label = 0
+
+    color_dict[label] = input_image[0, 0]
+    total_color_dict[label] = 1
+    result[0, 0] = label
+
+    while len(stack_similar) > 0 or len(stack_non_similar) > 0:
+
+        if len(stack_similar) > 0:
+            (x, y) = stack_similar.pop()
+
+        elif len(stack_non_similar) > 0:
+
+            (x, y) = stack_non_similar.pop()
+
+            if np.any(result[x, y] == -1):
+                label += 1
+                result[x, y] = label
+                color_dict[label] = input_image[x, y].copy()
+                total_color_dict[label] = 1
+            else:
+                continue
+
+        neighbors = [(x-1, y), (x+1, y), (x-1, y-1), (x+1, y+1),
+                     (x-1, y+1), (x+1, y-1), (x, y-1), (x, y+1)]
+
+        for n in neighbors:
+
+            if (0 <= n[0] <= image.shape[0] - 1) and (0 <= n[1] <= image.shape[1]-1) and result[n[0], n[1]] == -1:
+
+                if is_similar(image[x, y], image[n[0], n[1]], threshold):
+
+                    result[n[0], n[1]] = label
+
+                    color_dict[label] += input_image[x, y].copy()
+                    total_color_dict[label] += 1
+
+                    stack_similar.append(n)
+                    if n in stack_non_similar_dict:
+                        del stack_non_similar_dict[n]
+
+                else:
+                    if n not in stack_non_similar_dict:
+                        stack_non_similar.append(n)
+                        stack_non_similar_dict[n] = True
+
+    color = {}
+    for key in color_dict.keys():
+        color[key] = color_dict[key] / total_color_dict[key]
+    y = (input_image.shape[0]*input_image.shape[1]) // 100
+    for r in range(result2.shape[0]):
+        for c in range(result2.shape[1]):
+            result2[r, c] = (input_image[r, c] + color[result[r, c]])/2
+
+    return result2.clip(0.0, 255.0)
+
 
 # if __name__ == '__main__':
 #     file_name = "./img_test/image1.jpg"
