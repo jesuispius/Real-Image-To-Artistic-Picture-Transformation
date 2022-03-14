@@ -50,18 +50,18 @@ def landscape_pictures(I):
 
 def portrait_pictures(I):
     start = timeit.default_timer()
-    m = round(math.sqrt(I.shape[0] * I.shape[1]) / 500)
-    k = m * 5
-    if k < 1:
-        k = 1
-    I = bilateral_filter(I, k, k / 100, k)
-
+    # m = round(math.sqrt(I.shape[0] * I.shape[1]) / 500)
+    # k = m * 4
+    # if k < 1:
+    #     k = 1
+    
+    k = 5
     print('k =', k)
-    for _ in range(3):
-        I = bilateral_filter(I, k, k / 100, k)
-
+    I = bilateral_filter(I, k, k / 100, k)
     ip_gray = convert_color_space_RGB_to_GRAY(I)
     c = canny_edge_detection(ip_gray)
+    for _ in range(4):
+        I = bilateral_filter(I, k, k / 100, k)
 
     I = I - increase_dim(c, I) * 0.1
     I = I.clip(0.0, 255.0)

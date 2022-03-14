@@ -85,7 +85,7 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
     #     return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
 
     def our_kernel(data, sigma):
-        return np.round(np.exp(-0.5*((data)/(sigma**2))))
+        return (1.0/4.0)*np.round(4.0*np.exp(-0.5*((data)/(sigma**2))))
 
     sum_fr = np.zeros(input_image.shape)
     sum_gs_fr = np.zeros(input_image.shape)  # input_image * EPSILON
@@ -565,7 +565,7 @@ def layer_separation(input_image, threshold):
     y = (input_image.shape[0]*input_image.shape[1]) // 100
     for r in range(result2.shape[0]):
         for c in range(result2.shape[1]):
-            result2[r, c] = (input_image[r, c] + color[result[r, c]]*0.2)/1.2
+            result2[r, c] = color[result[r, c]] # (input_image[r, c] + )/1.2
 
     return result2.clip(0.0, 255.0)
 
