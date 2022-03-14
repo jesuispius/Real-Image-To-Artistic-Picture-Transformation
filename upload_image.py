@@ -62,7 +62,7 @@ def upload_image(isShown=False):
         # Show the image in the web page
         if isShown:
             st.subheader("Original Image:")
-            st.image(image=pil_image, caption="Original Image")
+            st.image(image=ret_img, caption="Original Image")
 
         # Convert image into numpy
         # original_img = np.array(pil_image)
