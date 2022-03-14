@@ -5,7 +5,6 @@
 # ==================================================================================================================== #
 
 # Dependencies
-from cmath import pi
 import os
 import numpy as np
 import math
@@ -14,10 +13,6 @@ import pickle
 import random
 from scipy import ndimage
 import string
-
-import timeit
-
-from sklearn import neighbors
 
 from color_transfer import convert_color_space_RGB_to_GRAY
 

@@ -13,7 +13,6 @@ from color_transfer import convert_color_space_RGB_to_BGR
 from our_algorithm import landscape_pictures, portrait_pictures
 
 
-@st.cache(suppress_st_warning=True)
 def download_image(filename):
     """
     Function helper to download the target image.

@@ -1,8 +1,6 @@
-from upload_image import upload_image, read_image
-from filtering import bilateral_filter, color_reducer, median_filter, canny_edge_detection, sobel_filter, layer_separation
-from color_transfer import convert_color_space_RGB_to_GRAY, convert_color_space_RGB_to_BGR
+from filtering import bilateral_filter, canny_edge_detection, layer_separation
+from color_transfer import convert_color_space_RGB_to_GRAY
 import timeit
-import cv2
 import numpy as np
 import math
 
@@ -18,8 +16,8 @@ def increase_dim(e, I):
 
 def landscape_pictures(I):
     start = timeit.default_timer()
-    m = round(math.sqrt(I.shape[0]*I.shape[1])/500)
-    k = m*3
+    m = round(math.sqrt(I.shape[0] * I.shape[1]) / 500)
+    k = m * 3
     if k < 1:
         k = 1
 
@@ -27,15 +25,13 @@ def landscape_pictures(I):
 
     I = layer_separation(I, 5)
 
-    cv2.imwrite('./img_test/temp.jpg', I)
-
     print('k =', k)
     for _ in range(3):
         I = bilateral_filter(I, k, k / 70, k)
 
     ip_gray = convert_color_space_RGB_to_GRAY(I)
 
-    h = m*3
+    h = m * 3
     if h < 3:
         h = 3
 
@@ -54,17 +50,13 @@ def landscape_pictures(I):
 
 def portrait_pictures(I):
     start = timeit.default_timer()
-    m = round(math.sqrt(I.shape[0]*I.shape[1])/500)
-    k = m*5
+    m = round(math.sqrt(I.shape[0] * I.shape[1]) / 500)
+    k = m * 5
     if k < 1:
         k = 1
     I = bilateral_filter(I, k, k / 100, k)
 
-
-   
-
     I = layer_separation(I, 2)
-    cv2.imwrite('./img_test/temp.jpg', I)
 
     print('k =', k)
     for _ in range(3):
@@ -72,8 +64,6 @@ def portrait_pictures(I):
 
     ip_gray = convert_color_space_RGB_to_GRAY(I)
     c = canny_edge_detection(ip_gray)
-    cv2.imwrite('./img_test/temp_canny.jpg', c)
-
 
     I = I - increase_dim(c, I) * 0.1
     I = I.clip(0.0, 255.0)
@@ -82,7 +72,6 @@ def portrait_pictures(I):
     print('Time: ', stop - start)
 
     return I
-
 
 # if __name__ == '__main__':
 #     img_path = './img_test/test1.jpg'
