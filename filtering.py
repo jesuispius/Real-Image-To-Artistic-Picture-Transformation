@@ -5,7 +5,6 @@
 # ==================================================================================================================== #
 
 # Dependencies
-from cmath import pi
 import os
 import numpy as np
 import math
@@ -487,11 +486,12 @@ def color_reducer(im, num_of_level):
 
 def layer_separation(input_image, threshold):
     np.seterr(divide='ignore', invalid='ignore')
+
     def is_similar(point1, point2, threshold):
 
         a = point1
         b = point2
-    
+
         diff = np.abs(100.0*(a - b)/a)
 
         if np.all(diff < threshold):
@@ -565,7 +565,7 @@ def layer_separation(input_image, threshold):
     y = (input_image.shape[0]*input_image.shape[1]) // 100
     for r in range(result2.shape[0]):
         for c in range(result2.shape[1]):
-            result2[r, c] = (input_image[r, c] + color[result[r, c]])/2
+            result2[r, c] = (input_image[r, c] + color[result[r, c]]*0.2)/1.2
 
     return result2.clip(0.0, 255.0)
 
