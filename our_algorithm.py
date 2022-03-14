@@ -56,8 +56,6 @@ def portrait_pictures(I):
         k = 1
     I = bilateral_filter(I, k, k / 100, k)
 
-    I = layer_separation(I, 2)
-
     print('k =', k)
     for _ in range(3):
         I = bilateral_filter(I, k, k / 100, k)
