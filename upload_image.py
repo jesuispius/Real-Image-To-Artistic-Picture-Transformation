@@ -38,13 +38,35 @@ def upload_image(isShown=False):
         # Open uploaded image
         pil_image = Image.open(uploaded_img)
 
+        # Size of image
+        w, h = pil_image.size
+
+        # Resize Image
+        stopped = True
+        scale_img = w / h
+
+        while stopped:
+            if w <= 500 and h <= 500:
+                stopped = False
+            else:
+                if w > 500:
+                    w = 500
+                    h = w * (1 / scale_img)
+
+                if h > 500:
+                    h = 500
+                    w = h * scale_img
+
+        ret_img = pil_image.resize((int(w), int(h)))
+
         # Show the image in the web page
         if isShown:
             st.subheader("Original Image:")
             st.image(image=pil_image, caption="Original Image")
 
         # Convert image into numpy
-        original_img = np.array(pil_image)
+        # original_img = np.array(pil_image)
+        original_img = np.array(ret_img)
 
     return original_img
 
