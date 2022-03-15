@@ -136,3 +136,7 @@ dmypy.json
 
 img_test/
 img/
+img/result/
+img/src/
+img/result/landscape/
+img/result/portrait/

@@ -10,13 +10,12 @@ from filtering import bilateral_filter, canny_edge_detection
 from color_transfer import convert_color_space_RGB_to_GRAY
 import timeit
 import numpy as np
-import math
 
 
 def increase_dim(e, I):
-    '''
+    """
     increase the dims of e to agree with I
-    '''
+    """
     if len(I.shape) > 2:
 
         if I.shape[2] == 3:
@@ -28,9 +27,9 @@ def increase_dim(e, I):
 
 
 def landscape(I):
-    '''
-    Generate artistic image for lanscape picture
-    '''
+    """
+    Generate artistic image for landscape picture
+    """
     start = timeit.default_timer()
 
     k = 5
@@ -51,9 +50,9 @@ def landscape(I):
 
 
 def portrait(I):
-    '''
-    Generate artistic image for portait picture
-    '''
+    """
+    Generate artistic image for portrait picture
+    """
     start = timeit.default_timer()
   
     k = 7
