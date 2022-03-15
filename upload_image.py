@@ -76,7 +76,7 @@ def read_image(filename):
     Function to read the image.
 
     :param filename: filename
-    :return:
+    :return: image
     """
     result = []
 

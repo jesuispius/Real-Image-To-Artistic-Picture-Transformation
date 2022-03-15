@@ -1,8 +1,6 @@
-# Final Project: Real Image To Cartoon Image Transformation
+# Final Project: Real Image To Artistic Picture Transformation
 
-### Author's names:
-- Phuoc Nguyen
-- Tri Le
+## :two_women_holding_hands: Collaborators: [Phuoc Nguyen](https://github.com/jesuispius) and [Tri Le](https://github.com/trilq142)
 
 ### Stack:
 - OpenCV 
