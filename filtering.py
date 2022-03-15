@@ -21,8 +21,9 @@ from color_transfer import convert_color_space_RGB_to_GRAY
 TWO_PI = 2.0 * math.pi
 MAX_THREAD = 6
 MAX_PROCESS_NUM = 1
-LOG_CONST = math.log(0.5) 
-
+LOG_CONST = math.log(0.5)
+WEAK_POINT = 1
+STRONG_POINT = 255
 
 PI_1_d_8 = math.pi / 8
 PI_1_d_4 = math.pi / 4
@@ -82,47 +83,46 @@ def median_filter(image, kernel_size=3):
 # BILATERAL FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
 def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_image, sigma_space, sigma_intensity):
-    def gaussian_kernel(data, sigma):
-        return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
-        
-
-    # def gaussian_kernel(data, sigma):
-    #     # return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
-    #     return  1.0 if -0.5*(data)/(sigma**2) >= LOG_CONST else 0.0
-
-    # def our_kernel(data, sigma):
-    #     return np.round(np.exp(-0.5*((data)/(sigma**2))))
-
-    # def our_kernel_salar(data,sigma):
-    #     if -0.5*(data)/(sigma**2) < LOG_CONST:
-    #         return 0.0
-    #     return 1.0
     def our_kernel1(data, sigma):
-        return  1.0 if -0.5*(data)/(sigma**2) >= LOG_CONST else 0.0
+        '''
+        This function is for alterternating gaussian kernel and improving the bilateral filter
+        This function is used for scalar inputs
+        '''
+        return 1.0 if -0.5*(data)/(sigma**2) >= LOG_CONST else 0.0
 
-    def our_kernel2(data,sigma):
-        return  ( -0.5*(data)/(sigma**2) >= LOG_CONST).astype(int).astype('float32')
+    def our_kernel2(data, sigma):
+        '''
+        This function is for alterternating gaussian kernel and improving the bilateral filter
+        This function is used for array inputs
+        '''
+        return (-0.5*(data)/(sigma**2) >= LOG_CONST).astype(int)
 
-    sum_fr = np.zeros(input_image.shape)
-    sum_gs_fr = np.zeros(input_image.shape) 
+    # Initialize variables
+    sum_weights = np.zeros(input_image.shape)
+    sum_intensities = np.zeros(input_image.shape)
 
+    # for each pixel in the kernel windows
     for w_col in range(start_col, end_col):
         for w_row in range(-window_width, window_width + 1):
+
+            # calculate weights for space
             gs = our_kernel1(w_col ** 2 + w_row ** 2, sigma_space)
 
-            w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
+            # For each pixel P  in the image
+            intensity = np.roll(input_image, [w_row, w_col], axis=[0, 1])
 
-            fr = gs * our_kernel2((w_image - input_image)
-                                 ** 2, sigma_intensity)
+            weight = gs * our_kernel2((intensity - input_image)
+                                      ** 2, sigma_intensity)
 
-            sum_gs_fr += w_image * fr
-            sum_fr += fr
+            sum_intensities += intensity * weight
+            sum_weights += weight
 
-    pickle.dump(sum_fr, open(
+    # return result in files
+    pickle.dump(sum_weights, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_fr{0}.tmp'.format(thread_id)), 'wb'),
         pickle.HIGHEST_PROTOCOL)
 
-    pickle.dump(sum_gs_fr, open(
+    pickle.dump(sum_intensities, open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)), 'wb'),
         pickle.HIGHEST_PROTOCOL)
 
@@ -130,37 +130,44 @@ def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_imag
 def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_window_width=1):
     responses = []
 
-    pool = Pool(processes=MAX_PROCESS_NUM)
+    pool = Pool(processes=MAX_THREAD)
 
     windows_width = radius_window_width
     total_window_length = 2 * windows_width + 1
 
-    rows_every_workers = total_window_length // MAX_PROCESS_NUM
+    rows_every_workers = total_window_length // MAX_THREAD
     start_row = -windows_width
     end_row = start_row + rows_every_workers
 
     data = input_image.astype(np.float32) / 255.0
 
-    for r in range(0, MAX_PROCESS_NUM):
+    # assign tasks for works
+    for r in range(0, MAX_THREAD):
+
+        # arguments of the function
         args = (start_row, end_row, windows_width, r,
                 data, sigma_space, sigma_intensity)
+
+        # call the function
         res = pool.apply_async(run_bilateral_filter, args)
 
         responses.append(res)
-
         start_row += rows_every_workers
 
-        if r == MAX_PROCESS_NUM - 2:
+        if r == MAX_THREAD - 2:
             end_row = windows_width + 1
         else:
             end_row += rows_every_workers
 
+    # wait until the works done
     for res in responses:
         res.wait()
 
     sum_fr = None
     sum_gs_fr = None
-    for thread_id in range(0, MAX_PROCESS_NUM):
+
+    # combine the result
+    for thread_id in range(0, MAX_THREAD):
 
         if thread_id == 0:
             sum_fr = pickle.load(
@@ -184,81 +191,15 @@ def bilateral_filter(input_image, sigma_space=10.0, sigma_intensity=0.1, radius_
         os.remove(os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'bilateralsum_gs_fr{0}.tmp'.format(thread_id)))
 
+    # return the result
     sum_gs_fr = sum_gs_fr / sum_fr
 
     return (sum_gs_fr * 255.0).clip(0.0, 255.0)
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
-# mean FILTERING
+# convolve
 # -------------------------------------------------------------------------------------------------------------------- #
-def run_mean_filter(start_col, end_col, window_width, thread_id, input_image):
-    sum_fr = np.zeros(input_image.shape)
-
-    for w_col in range(start_col, end_col):
-        for w_row in range(-window_width, window_width + 1):
-            w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
-            sum_fr += w_image
-
-    pickle.dump(
-        sum_fr,
-        open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-             'mean_sum_fr{0}.tmp'.format(thread_id)), 'wb'),
-        pickle.HIGHEST_PROTOCOL
-    )
-
-
-def mean_filter(input_image, radius_window_width=1):
-    responses = []
-
-    pool = Pool(processes=MAX_PROCESS_NUM)
-
-    windows_width = radius_window_width
-    total_window_length = 2 * windows_width + 1
-
-    rows_every_workers = total_window_length // MAX_PROCESS_NUM
-    start_row = -windows_width
-    end_row = start_row + rows_every_workers
-
-    data = input_image
-
-    for r in range(0, MAX_PROCESS_NUM):
-        args = (start_row, end_row, windows_width, r,
-                data)
-        res = pool.apply_async(run_mean_filter, args)
-
-        responses.append(res)
-
-        start_row += rows_every_workers
-
-        if r == MAX_PROCESS_NUM - 2:
-            end_row = windows_width + 1
-        else:
-            end_row += rows_every_workers
-
-    for res in responses:
-        res.wait()
-
-    sum_fr = None
-
-    for thread_id in range(0, MAX_PROCESS_NUM):
-
-        if thread_id == 0:
-            sum_fr = pickle.load(
-                open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)),
-                     "rb"))
-        else:
-            sum_fr += pickle.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                    'mean_sum_fr{}.tmp'.format(thread_id)), "rb"))
-
-        os.remove(os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'mean_sum_fr{0}.tmp'.format(thread_id)))
-
-    sum_fr = sum_fr / (total_window_length ** 2)
-
-    return sum_fr.clip(0.0, 255.0)
-
-
 def convolve(image, filtered):
     if len(image.shape) > 2:
         filter_expand = np.stack([filtered] * image.shape[2], axis=2)
@@ -272,6 +213,9 @@ def convolve(image, filtered):
 # GAUSSIAN FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
 def gaussian_kernel(size, sigma=1):
+    '''
+    Generate the gaussian kernel matrix
+    '''
     size = int(size) // 2
     x, y = np.mgrid[-size:size + 1, -size:size + 1]
     normal = 1 / (2.0 * np.pi * sigma ** 2)
@@ -280,8 +224,12 @@ def gaussian_kernel(size, sigma=1):
 
 
 def gaussian_filters(img, kernel_size=3, sigma=1):
+    '''
+    Gaussian filter
+    param kernel_size: the size of the kernel matrix
+    sigma: the size of the blur circle.
+    '''
     g_kernel_matrix = gaussian_kernel(kernel_size, sigma)
-
     return convolve(img, g_kernel_matrix)
 
 
@@ -289,28 +237,40 @@ def gaussian_filters(img, kernel_size=3, sigma=1):
 # SOBEL FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
 def sobel_filter(img):
-    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
 
-    Ix = convolve(img, Kx)
-    Iy = convolve(img, Ky)
+    convolve_matrix_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    convolve_matrix_y = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
 
-    G = np.hypot(Ix, Iy)
-    G = G / G.max() * 255
+    Gx = convolve(img, convolve_matrix_x)
+    Gy = convolve(img, convolve_matrix_y)
+
+    #calculate the magnitude of the gradient
+    G = np.hypot(Gx, Gy)
+    
+    #normalize data
+    G = G / G.max() * 255 
 
     return G
 
+# -------------------------------------------------------------------------------------------------------------------- #
+# SOBEL FILTERING and GRADIENT ANGLE
+# -------------------------------------------------------------------------------------------------------------------- #
+def sobel_filters_and_gradient_angle(img):
 
-def sobel_filters(img):
-    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+    convolve_matrix_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    convolve_matrix_y = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
 
-    Ix = convolve(img, Kx)
-    Iy = convolve(img, Ky)
+    Gx = convolve(img, convolve_matrix_x)
+    Gy = convolve(img, convolve_matrix_y)
 
-    G = np.hypot(Ix, Iy)
-    G = G / G.max() * 255
-    theta = np.arctan2(Iy, Ix)
+    #calculate the magnitude of the gradient
+    G = np.hypot(Gx, Gy)
+    
+    #normalize data
+    G = G / G.max() * 255 
+
+    #calculate gradient angles
+    theta = np.arctan2(Gy, Gx)
 
     return G, theta
 
@@ -319,6 +279,10 @@ def sobel_filters(img):
 # NON MAX SUPPRESSION
 # -------------------------------------------------------------------------------------------------------------------- #
 def non_max_suppression(img, gradient_angle):
+    '''
+    Purpose: make the edges thinner
+    This function can run parallely 
+    '''
     return run_parallel(img, run_non_max_suppression, (gradient_angle,))
 
 
@@ -326,6 +290,7 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
     rows = im.shape[0]
     cols = im.shape[1]
 
+    #initialize result
     result = np.zeros((end_row - start_row, cols), dtype=np.int32)
 
     begin_row = start_row
@@ -337,6 +302,7 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
 
     gradient_angle[gradient_angle < 0] += PI_1_d_1
 
+    #contain all case of angles and postion of r and q
     run_angle = [(0, PI_1_d_8, (0, 1), (0, -1)),
                  (PI_1_d_4 - PI_1_d_8, PI_1_d_4 + PI_1_d_8, (1, -1), (-1, 1)),
                  (PI_1_d_2 - PI_1_d_8, PI_1_d_2 + PI_1_d_8, (1, 0), (-1, 0)),
@@ -347,18 +313,20 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
         for j in range(1, cols - 1):
             q = 255
             r = 255
-
+            #find postion of q and r based on the angle
             for ra in run_angle:
                 if ra[0] <= gradient_angle[i, j] < ra[1]:
                     q = im[i + ra[2][0], j + ra[2][1]]
                     r = im[i + ra[3][0], j + ra[3][1]]
                     break
-
+            
+            #narrow the edge 
             if (im[i, j] >= q) and (im[i, j] >= r):
                 result[i - start_row, j] = im[i, j]
             else:
                 result[i - start_row, j] = 0
-
+    
+    #return result
     pickle.dump(result, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
 
 
@@ -366,31 +334,37 @@ def run_non_max_suppression(file_name, start_row, end_row, im, gradient_angle):
 # THRESHOLD
 # -------------------------------------------------------------------------------------------------------------------- #
 def threshold(img, low_threshold=15, high_threshold=30):
-    res = np.zeros_like(img, dtype=int)
+    '''
+    This function threshold the image
+    Return the array of threshold
+    '''
 
-    weak = 1
-    strong = 255
+    result = np.zeros_like(img, dtype=int)
 
     strong_x_cord, strong_y_cord = np.where(img >= high_threshold)
 
     weak_x_cord, weak_y_cord = np.where(
         (img < high_threshold) & (img >= low_threshold))
 
-    res[strong_x_cord, strong_y_cord] = strong
-    res[weak_x_cord, weak_y_cord] = weak
+    result[strong_x_cord, strong_y_cord] = STRONG_POINT
+    result[weak_x_cord, weak_y_cord] = WEAK_POINT
 
-    return res, weak, strong
+    return result
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
 # HYSTERESIS
 # -------------------------------------------------------------------------------------------------------------------- #
-def hysteresis(img, weak=127, strong=255):
-    return run_parallel(img, run_hysteresis, (weak, strong))
+def hysteresis(img):
+    '''
+    This function is for connecting weak point to strong point
+    param: img is the input image
+    '''
+    return run_parallel(img, run_hysteresis, ())
 
 
 # Edge Tracking by Hysteresis
-def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
+def run_hysteresis(file_name, start_row, end_row, im):
     rows = im.shape[0]
     cols = im.shape[1]
 
@@ -401,20 +375,32 @@ def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
     stop_row = end_row
     if end_row == 0:
         stop_row == rows - 1
-
+    
+    # define the neighbors
     neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1),
                  (0, 1), (1, -1), (1, 0), (1, 1)]
 
+    
     for i in range(begin_row, stop_row):
         for j in range(1, cols - 1):
-            if im[i, j] == weak:
+            #if we see a week point
+            if im[i, j] == WEAK_POINT:
+
+                #check all neighbors of that week point
                 for n in neighbors:
-                    if (im[i + n[0], j + n[1]] == strong):
-                        im[i, j] = strong
+                    
+                    # there exists a strong points in the neighbors, 
+                    # the turn the week point to a strong point 
+                    if (im[i + n[0], j + n[1]] == STRONG_POINT):
+                        im[i, j] = STRONG_POINT
                         break
-                if im[i, j] == weak:
+                
+                #if there no strong point in this week point,
+                #then remove it
+                if im[i, j] == WEAK_POINT:
                     im[i, j] = 0
 
+    #return result via file
     pickle.dump(im[start_row:end_row, :], open(
         file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
 
@@ -423,6 +409,9 @@ def run_hysteresis(file_name, start_row, end_row, im, weak=127, strong=255):
 # CANNY EDGE DETECTION
 # -------------------------------------------------------------------------------------------------------------------- #
 def canny_edge_detection(img, gaussian_kernel=3, sigma=1):
+    '''
+        edge detection using Canny algrothrim
+    '''
     if len(img.shape) > 2:
         I = convert_color_space_RGB_to_GRAY(img)
     else:
@@ -431,27 +420,37 @@ def canny_edge_detection(img, gaussian_kernel=3, sigma=1):
     # Noise reduce by gaussian
     I = gaussian_filters(I, gaussian_kernel, sigma)
 
-    (I, gradient_angle) = sobel_filters(I)
+    # Apple Sobel filter
+    (I, gradient_angle) = sobel_filters_and_gradient_angle(I)
 
+    # Make edges thinner 
     I = non_max_suppression(I, gradient_angle)
 
-    (I, weak, strong) = threshold(I)
+    # set threshold
+    I = threshold(I)
 
-    I = hysteresis(I, weak, strong)
+    #Edge tracking and linking
+    I = hysteresis(I)
 
+    #return result
     return I
 
 
 def run_parallel(im, func, parameters=()):
+    '''
+    Help function run parallely
+    '''
     def generate_file_name():
         letters = string.ascii_lowercase
         return ''.join(random.choice(letters) for _ in range(10))
+
 
     rows = im.shape[0]
 
     process_result_list = []
     workers = Pool(processes=MAX_THREAD)
 
+    #initial scope for every workers
     rows_for_workers = rows // MAX_THREAD
     start_row = 0
     end_row = rows_for_workers
@@ -460,16 +459,20 @@ def run_parallel(im, func, parameters=()):
 
     current_path = os.path.dirname(os.path.abspath(__file__))
     temp_folder = generate_file_name()
+
+
     current_path = os.path.join(current_path, temp_folder)
     os.mkdir(current_path)
 
     for process_num in range(0, MAX_THREAD):
 
         if end_row > start_row:
+            #create file name for returning results
             file_name = generate_file_name()
             file_name = os.path.join(current_path, file_name)
             list_files.append(file_name)
 
+            #call the function
             args = (file_name, start_row, end_row, im) + parameters
             process_result = workers.apply_async(func, args)
             process_result_list.append(process_result)
@@ -497,103 +500,8 @@ def run_parallel(im, func, parameters=()):
 
 
 def color_reducer(im, num_of_level):
-    return np.round(im / num_of_level)*num_of_level
+    #reduce color in a image into some level of color
+    num_color_in_level = 255 // num_of_level
+    level = im // num_color_in_level
+    return level * num_color_in_level
 
-
-def layer_separation(input_image, threshold):
-    np.seterr(divide='ignore', invalid='ignore')
-
-    def is_similar(point1, point2, threshold):
-
-        a = point1
-        b = point2
-
-        diff = np.abs(100.0*(a - b)/a)
-
-        if np.all(diff < threshold):
-            return True
-
-        return False
-
-    image = input_image
-
-    color_dict = {}
-    total_color_dict = {}
-
-    result = np.full(
-        (input_image.shape[0], input_image.shape[1]), -1, dtype=int)
-    result2 = np.full_like(input_image, 0, dtype=np.float64)
-
-    stack_similar = [(0, 0)]
-
-    stack_non_similar_dict = {}
-    stack_non_similar = []
-
-    label = 0
-
-    color_dict[label] = input_image[0, 0]
-    total_color_dict[label] = 1
-    result[0, 0] = label
-
-    while len(stack_similar) > 0 or len(stack_non_similar) > 0:
-
-        if len(stack_similar) > 0:
-            (x, y) = stack_similar.pop()
-
-        elif len(stack_non_similar) > 0:
-
-            (x, y) = stack_non_similar.pop()
-
-            if np.any(result[x, y] == -1):
-                label += 1
-                result[x, y] = label
-                color_dict[label] = input_image[x, y].copy()
-                total_color_dict[label] = 1
-            else:
-                continue
-
-        neighbors = [(x-1, y), (x+1, y), (x-1, y-1), (x+1, y+1),
-                     (x-1, y+1), (x+1, y-1), (x, y-1), (x, y+1)]
-
-        for n in neighbors:
-
-            if (0 <= n[0] <= image.shape[0] - 1) and (0 <= n[1] <= image.shape[1]-1) and result[n[0], n[1]] == -1:
-
-                if is_similar(image[x, y], image[n[0], n[1]], threshold):
-
-                    result[n[0], n[1]] = label
-
-                    color_dict[label] += input_image[x, y].copy()
-                    total_color_dict[label] += 1
-
-                    stack_similar.append(n)
-                    if n in stack_non_similar_dict:
-                        del stack_non_similar_dict[n]
-
-                else:
-                    if n not in stack_non_similar_dict:
-                        stack_non_similar.append(n)
-                        stack_non_similar_dict[n] = True
-
-    color = {}
-    for key in color_dict.keys():
-        color[key] = color_dict[key] / total_color_dict[key]
-    y = (input_image.shape[0]*input_image.shape[1]) // 100
-    for r in range(result2.shape[0]):
-        for c in range(result2.shape[1]):
-            result2[r, c] = (input_image[r, c] + color[result[r, c]]*0.25)/1.25
-
-    return result2.clip(0.0, 255.0)
-
-
-# if __name__ == '__main__':
-#     file_name = "./img_test/image1.jpg"
-#     img = cv2.imread(file_name)
-
-#     start = timeit.default_timer()
-#     new_img = sobel_filters(img)
-
-#     cv2.imwrite('./img_test/result2.png', new_img)
-
-#     stop = timeit.default_timer()
-#     print('Time: ', stop - start)

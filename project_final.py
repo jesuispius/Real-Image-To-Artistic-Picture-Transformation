@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from upload_image import upload_image
 from color_transfer import convert_color_space_RGB_to_BGR
-from our_algorithm import landscape_pictures, portrait_pictures
+from our_algorithm import landscape, portrait_pictures
 
 
 def download_image(filename):
@@ -62,15 +62,17 @@ def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False
 
 def gen_landscape_image(img, path):
     with st.spinner('Please waiting...'):
-        img_landscape = landscape_pictures(img)
-    img_landscape = save_and_display_image(img_landscape, "Landscape Image", path, True, True, False)
+        img_landscape = landscape(img)
+    img_landscape = save_and_display_image(
+        img_landscape, "Landscape Image", path, True, True, False)
     return img_landscape
 
 
 def gen_portrait_image(img, path):
     with st.spinner('Please waiting...'):
         img_portrait = portrait_pictures(img)
-    img_portrait = save_and_display_image(img_portrait, "Portrait Image", path, True, True, False)
+    img_portrait = save_and_display_image(
+        img_portrait, "Portrait Image", path, True, True, False)
     return img_portrait
 
 
@@ -90,7 +92,8 @@ section = st.sidebar.selectbox(
 if section == "":
     st.header("Welcome to our application!")
     st.subheader("Description:")
-    st.markdown('Our application is built to generate an artistic picture from a real image.')
+    st.markdown(
+        'Our application is built to generate an artistic picture from a real image.')
     st.subheader("Author:")
     st.markdown('Phuoc Nguyen and Tri Le.')
 
