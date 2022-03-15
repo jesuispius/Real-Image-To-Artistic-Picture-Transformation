@@ -55,13 +55,12 @@ def portrait(I):
     Generate artistic image for portait picture
     '''
     start = timeit.default_timer()
-    
-    k = 10
-    I = bilateral_filter(I, k, k / 100, k)
-    
-    k = 5
-    I = bilateral_filter(I, k, k / 100, k)
-    
+  
+    k = 7
+    for _ in range(3):
+        I = bilateral_filter(I, k, k / 75, k) 
+        k = k - 2
+
     ip_gray = convert_color_space_RGB_to_GRAY(I)
     c = canny_edge_detection(ip_gray)
   

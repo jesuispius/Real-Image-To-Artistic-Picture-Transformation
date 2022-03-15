@@ -41,7 +41,7 @@ def gen_landscape_image(img, path):
     with st.spinner('Please waiting...'):
         img_landscape = landscape(img)
     img_landscape = save_and_display_image(
-        img_landscape, "Landscape Image", path, True, True, False)
+        img_landscape, "Landscape Image", path, True)
     return img_landscape
 
 
@@ -49,7 +49,7 @@ def gen_portrait_image(img, path):
     with st.spinner('Please waiting...'):
         img_portrait = portrait(img)
     img_portrait = save_and_display_image(
-        img_portrait, "Portrait Image", path, True, True, False)
+        img_portrait, "Portrait Image", path, True)
     return img_portrait
 
 
