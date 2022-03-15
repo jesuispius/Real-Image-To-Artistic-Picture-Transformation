@@ -1,3 +1,11 @@
+# ==================================================================================================================== #
+# Collaborators: Phuoc Nguyen + Tri Le
+# Description: This file includes the algorithms to be blending and flattening the image by our own.
+# Filename: our_algorithm.py
+# ==================================================================================================================== #
+
+
+# Dependencies
 from filtering import bilateral_filter, canny_edge_detection
 from color_transfer import convert_color_space_RGB_to_GRAY
 import timeit
@@ -42,7 +50,7 @@ def landscape(I):
     return I
 
 
-def portrait_pictures(I):
+def portrait(I):
     '''
     Generate artistic image for portait picture
     '''
