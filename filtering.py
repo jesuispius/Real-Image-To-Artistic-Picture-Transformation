@@ -20,7 +20,8 @@ from color_transfer import convert_color_space_RGB_to_GRAY
 # Global Variable
 TWO_PI = 2.0 * math.pi
 MAX_THREAD = 6
-MAX_PROCESS_NUM = 6
+MAX_PROCESS_NUM = 1
+LOG_CONST = math.log(0.5) 
 
 
 PI_1_d_8 = math.pi / 8
@@ -81,22 +82,37 @@ def median_filter(image, kernel_size=3):
 # BILATERAL FILTERING
 # -------------------------------------------------------------------------------------------------------------------- #
 def run_bilateral_filter(start_col, end_col, window_width, thread_id, input_image, sigma_space, sigma_intensity):
-    # def gaussian_kernel(data, sigma):
-    #     return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
+    def gaussian_kernel(data, sigma):
+        return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
+        
 
-    def our_kernel(data, sigma):
-        return (1.0/4.0)*np.round(4.0*np.exp(-0.5*((data)/(sigma**2))))
+    # def gaussian_kernel(data, sigma):
+    #     # return (1/(TWO_PI*sigma*sigma))*np.exp(-((data)/(2.0*sigma**2)))
+    #     return  1.0 if -0.5*(data)/(sigma**2) >= LOG_CONST else 0.0
+
+    # def our_kernel(data, sigma):
+    #     return np.round(np.exp(-0.5*((data)/(sigma**2))))
+
+    # def our_kernel_salar(data,sigma):
+    #     if -0.5*(data)/(sigma**2) < LOG_CONST:
+    #         return 0.0
+    #     return 1.0
+    def our_kernel1(data, sigma):
+        return  1.0 if -0.5*(data)/(sigma**2) >= LOG_CONST else 0.0
+
+    def our_kernel2(data,sigma):
+        return  ( -0.5*(data)/(sigma**2) >= LOG_CONST).astype(int).astype('float32')
 
     sum_fr = np.zeros(input_image.shape)
-    sum_gs_fr = np.zeros(input_image.shape)  # input_image * EPSILON
+    sum_gs_fr = np.zeros(input_image.shape) 
 
     for w_col in range(start_col, end_col):
         for w_row in range(-window_width, window_width + 1):
-            gs = our_kernel(w_col ** 2 + w_row ** 2, sigma_space)
+            gs = our_kernel1(w_col ** 2 + w_row ** 2, sigma_space)
 
             w_image = np.roll(input_image, [w_row, w_col], axis=[0, 1])
 
-            fr = gs * our_kernel((w_image - input_image)
+            fr = gs * our_kernel2((w_image - input_image)
                                  ** 2, sigma_intensity)
 
             sum_gs_fr += w_image * fr
@@ -565,7 +581,7 @@ def layer_separation(input_image, threshold):
     y = (input_image.shape[0]*input_image.shape[1]) // 100
     for r in range(result2.shape[0]):
         for c in range(result2.shape[1]):
-            result2[r, c] = color[result[r, c]] # (input_image[r, c] + )/1.2
+            result2[r, c] = (input_image[r, c] + color[result[r, c]]*0.25)/1.25
 
     return result2.clip(0.0, 255.0)
 

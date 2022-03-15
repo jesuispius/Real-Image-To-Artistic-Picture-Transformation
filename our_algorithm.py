@@ -54,7 +54,7 @@ def portrait_pictures(I):
     # k = m * 4
     # if k < 1:
     #     k = 1
-    
+
     k = 5
     print('k =', k)
     I = bilateral_filter(I, k, k / 100, k)
@@ -71,11 +71,16 @@ def portrait_pictures(I):
 
     return I
 
+
 # if __name__ == '__main__':
-#     img_path = './img_test/test1.jpg'
+#     import cv2
+#     img_path = './img_test/test_0.jpg'
 
 #     I = cv2.imread(img_path, cv2.COLOR_BGR2RGB).astype('float32')
 
-#     I = landscape_pictures(I)
-#     # I = portrait_pictures(I)
-#     cv2.imwrite('./img_test/_result.jpg', I)
+#     for i in range(0, 7):
+
+#         for j in range(0, 7):
+#             I2 = bilateral_filter(I.copy(), 1 + i*20, 0.01 + j*0.03, 5)
+#             cv2.imwrite(
+#                 './img_test/test/result{0}_{1}.jpg'.format(i, j, I2), I2)
