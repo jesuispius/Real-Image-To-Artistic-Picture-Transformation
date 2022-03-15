@@ -5,12 +5,12 @@
 - Tri Le
 
 ### Stack:
-- OpenCv 
+- OpenCV 
 - Streamlit
 
 ### Run the project:
 ```
-streamlit run cartoon_transformation.py
+streamlit run project_final.py
 ```
 
 

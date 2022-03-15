@@ -13,23 +13,7 @@ from color_transfer import convert_color_space_RGB_to_BGR
 from our_algorithm import landscape_pictures, portrait_pictures
 
 
-def download_image(filename):
-    """
-    Function helper to download the target image.
-
-    :param filename: filename
-    :return: None
-    """
-    with open(filename, "rb") as file:
-        st.download_button(
-            label="Download image",
-            data=file,
-            file_name=filename,
-            mime="image/png"
-        )
-
-
-def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False, is_saved=False):
+def save_and_display_image(img, label, path, is_shown=False):
     """
     Function to save and display the image on the webpage.
 
@@ -37,8 +21,6 @@ def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False
     :param label: label of image
     :param path: where to store image
     :param is_shown: whether showing image on the webpage or not
-    :param is_downloaded: whether download the image or not
-    :param is_saved:
     :return: image result
     """
     image = np.array(img).astype(np.uint8)
@@ -48,14 +30,9 @@ def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False
 
     filename = path + label.strip() + ".png"
 
-    if is_downloaded:
-        image = convert_color_space_RGB_to_BGR(image)
-        image = image.astype(np.uint8)
-        cv2.imwrite(filename, image)
-        download_image(filename)
-
-    if is_saved:
-        cv2.imwrite(filename, image)
+    image = convert_color_space_RGB_to_BGR(image)
+    image = image.astype(np.uint8)
+    cv2.imwrite(filename, image)
 
     return image
 
@@ -63,14 +40,14 @@ def save_and_display_image(img, label, path, is_shown=False, is_downloaded=False
 def gen_landscape_image(img, path):
     with st.spinner('Please waiting...'):
         img_landscape = landscape_pictures(img)
-    img_landscape = save_and_display_image(img_landscape, "Landscape Image", path, True, True, False)
+    img_landscape = save_and_display_image(img_landscape, "Landscape Image", path, True)
     return img_landscape
 
 
 def gen_portrait_image(img, path):
     with st.spinner('Please waiting...'):
         img_portrait = portrait_pictures(img)
-    img_portrait = save_and_display_image(img_portrait, "Portrait Image", path, True, True, False)
+    img_portrait = save_and_display_image(img_portrait, "Portrait Image", path, True)
     return img_portrait
 
 
